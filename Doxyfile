@@ -1,0 +1,33 @@
+# Doxyfile 1.10.0
+
+# This file describes the settings to be used by the documentation system
+# doxygen (www.doxygen.org) for a project.
+#
+# All text after a double hash (##) is considered a comment and is placed in
+# front of the TAG it is preceding.
+#
+# All text after a single hash (#) is considered a comment and will be ignored.
+# The format is:
+# TAG = value [value, ...]
+# For lists, items can also be appended using:
+# TAG += value [value, ...]
+# Values that contain spaces should be placed between quotes (\" \").
+#
+# Note:
+#
+# Use doxygen to compare the used configuration file with the template
+# configuration file:
+# doxygen -x [configFile]
+# Use doxygen to compare the used configuration file with the template
+# configuration file without replacing the environment variables or CMake type
+# replacement variables:
+# doxygen -x_noenv [configFile]
+
+## Generated using -x:
+
+PROJECT_NAME           = Iridescence
+OUTPUT_DIRECTORY       = docs
+CREATE_SUBDIRS         = YES
+EXTRACT_PRIVATE        = YES
+INPUT                  = src/iri ## src/pbrt
+RECURSIVE              = YES

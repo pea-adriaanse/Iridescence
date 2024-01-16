@@ -539,7 +539,12 @@ set (PBRT_SOURCE
 
   src/pbrt/cmd/pspec_gpu.cpp
   )
-  
+
+# Iridescence
+file(GLOB IRI_SOURCE CONFIGURE_DEPENDS src/iri/*.cpp)
+list(APPEND PBRT_SOURCE ${IRI_SOURCE})
+# pbrt again
+
 if (MSVC)
     set (PBRT_SOURCE ${PBRT_SOURCE} src/pbrt/visualstudio.natvis)
 endif ()
@@ -567,6 +572,11 @@ set (PBRT_SOURCE_HEADERS
   src/pbrt/shapes.h
   src/pbrt/textures.h
   )  
+
+# Iridescence
+file(GLOB IRI_SOURCE_HEADERS CONFIGURE_DEPENDS src/iri/*.hpp)
+list(APPEND PBRT_SOURCE_HEADERS ${IRI_SOURCE_HEADERS})
+# pbrt again
 
 SET (PBRT_CPU_SOURCE
   src/pbrt/cpu/aggregates.cpp

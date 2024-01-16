@@ -12,6 +12,8 @@
 #include <pbrt/util/taggedptr.h>
 #include <pbrt/util/vecmath.h>
 
+#include <iri/lambertianBRDF.hpp> // Iri
+
 #include <string>
 
 namespace pbrt {
@@ -161,12 +163,14 @@ class ConductorBxDF;
 class NormalizedFresnelBxDF;
 class CoatedDiffuseBxDF;
 class CoatedConductorBxDF;
+class LambertianBRDF; // Iri
 
 // BxDF Definition
 class BxDF
     : public TaggedPointer<DiffuseTransmissionBxDF, DiffuseBxDF, CoatedDiffuseBxDF,
                            CoatedConductorBxDF, DielectricBxDF, ThinDielectricBxDF,
-                           HairBxDF, MeasuredBxDF, ConductorBxDF, NormalizedFresnelBxDF> {
+                           HairBxDF, MeasuredBxDF, ConductorBxDF, NormalizedFresnelBxDF,
+                           LambertianBRDF> {
   public:
     // BxDF Interface
     PBRT_CPU_GPU inline BxDFFlags Flags() const;
