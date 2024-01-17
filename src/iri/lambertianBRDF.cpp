@@ -3,8 +3,6 @@
 
 #include <iri/lambertianBRDF.hpp>
 
-namespace pbrt {
+namespace iri {
 std::string LambertianBRDF::ToString() const { return "LambertianBRDF"; }
-}  // namespace pbrt
-
-// TODO
+}  // namespace iri
