@@ -1,24 +1,23 @@
-
-#include <pbrt/base/bxdf.h>
 #include <pbrt/pbrt.h>
 
-#include <string>
-
-namespace iri {
-using namespace pbrt;
+namespace pbrt {
 class LambertianBRDF {
+  public:
 	LambertianBRDF() = default;
-	// VxDF Interface:
+	// BxDF Interface:
 	// TODO: used by ??
-	PBRT_CPU_GPU inline BxDFFlags Flags() const {
+	PBRT_CPU_GPU BxDFFlags Flags() const {
 		return BxDFFlags::DiffuseReflection;
 	}
+
+	PBRT_CPU_GPU
+	static constexpr const char *Name() { return "LambertianBRDF"; }
 
 	std::string ToString() const;
 
 	/// Give BRDF given local wo & wi.
-	PBRT_CPU_GPU inline SampledSpectrum f(Vector3f wo, Vector3f wi,
-										  TransportMode mode) const {
+	PBRT_CPU_GPU SampledSpectrum f(Vector3f wo, Vector3f wi,
+								   TransportMode mode) const {
 		if (!SameHemisphere(wo, wi)) {
 			return SampledSpectrum(0.0f);
 		}
@@ -31,7 +30,7 @@ class LambertianBRDF {
 	/// @param mode mode determining if camera or light is out direction
 	/// @param sampleFlags requested sampling flags
 	/// @return The local wi, the BRDF, the PDF & flags about the sample.
-	PBRT_CPU_GPU inline pstd::optional<BSDFSample> Sample_f(
+	PBRT_CPU_GPU pstd::optional<BSDFSample> Sample_f(
 		Vector3f wo, Float uc, Point2f u,
 		TransportMode mode = TransportMode::Radiance,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
@@ -52,8 +51,8 @@ class LambertianBRDF {
 		return sample;
 	}
 
-	PBRT_CPU_GPU inline Float PDF(
-		Vector3f wo, Vector3f wi, TransportMode mode,
+	PBRT_CPU_GPU Float
+	PDF(Vector3f wo, Vector3f wi, TransportMode mode,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
 		float cosine = CosTheta(wo);
 		return CosineHemispherePDF(cosine);
@@ -67,8 +66,8 @@ class LambertianBRDF {
 	// 					pstd::span<const Float> uc2,
 	// 					pstd::span<const Point2f> u2) const;
 
-	PBRT_CPU_GPU inline void Regularize() {
+	PBRT_CPU_GPU void Regularize() {
 		// TODO ??
 	}
 };
-}  // namespace iri
+}  // namespace pbrt

@@ -1,8 +1,6 @@
 
-#include <pbrt/pbrt.h>
+#include <pbrt/bxdfs.h>
 
-#include <iri/lambertianBRDF.hpp>
-
-namespace iri {
+namespace pbrt {
 std::string LambertianBRDF::ToString() const { return "LambertianBRDF"; }
-}  // namespace iri
+}  // namespace pbrt

@@ -12,7 +12,7 @@
 #include <pbrt/util/taggedptr.h>
 #include <pbrt/util/vecmath.h>
 
-#include <iri/lambertianBRDF.hpp> // Iri
+// #include <iri/lambertianBRDF.hpp> // Iri
 
 #include <string>
 

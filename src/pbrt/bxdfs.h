@@ -24,6 +24,8 @@
 #include <limits>
 #include <string>
 
+#include <iri/lambertianBRDF.hpp>
+
 namespace pbrt {
 
 // DiffuseBxDF Definition
