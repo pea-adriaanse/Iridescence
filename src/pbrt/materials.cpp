@@ -641,6 +641,8 @@ Material Material::Create(const std::string &name,
         return nullptr;
     } else if (name == "interface")
         return nullptr;
+    else if(name=="lambertian")
+        material = LambertianMaterial::Create(parameters, normalMap, loc, alloc);
     else if (name == "diffuse")
         material = DiffuseMaterial::Create(parameters, normalMap, loc, alloc);
     else if (name == "coateddiffuse")

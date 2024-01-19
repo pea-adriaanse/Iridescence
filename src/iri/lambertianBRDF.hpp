@@ -1,9 +1,15 @@
-#include <pbrt/pbrt.h>
+#pragma once
+#include <pbrt/base/bxdf.h>
 
 namespace pbrt {
 class LambertianBRDF {
+  private:
+	Float reflectance;
+
   public:
 	LambertianBRDF() = default;
+	PBRT_CPU_GPU
+	LambertianBRDF(Float reflectance) : reflectance(reflectance) {}
 	// BxDF Interface:
 	// TODO: used by ??
 	PBRT_CPU_GPU BxDFFlags Flags() const {
@@ -21,7 +27,7 @@ class LambertianBRDF {
 		if (!SameHemisphere(wo, wi)) {
 			return SampledSpectrum(0.0f);
 		}
-		return SampledSpectrum(InvPi);	// Assumed R = 1 (full reflection)
+		return SampledSpectrum(reflectance * InvPi);
 	}
 
 	/// @brief Samples the BRDF
@@ -35,27 +41,29 @@ class LambertianBRDF {
 		TransportMode mode = TransportMode::Radiance,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
 		if (!(sampleFlags & BxDFReflTransFlags::Reflection)) {
-			pstd::optional<BSDFSample>();  // None
+			return {};	// None
 		}
-		if (mode == TransportMode::Importance) {
-			assert(0);
-			// TODO
-		}
-		BSDFSample sample;
-		sample.wi = SampleCosineHemisphere(u);
-		sample.f = f(wo, sample.wi, mode);
-		sample.pdf = PDF(wo, sample.wi, mode, sampleFlags);
-		// sample.eta = ?
-		// sample.flags = ?
-		// sample.pdfIsProportional = ?
-		return sample;
+		Vector3f wi = SampleCosineHemisphere(u);
+		if (wo.z < 0)
+			wi.z *= -1;
+		// SampledSpectrum f_ = f(wo, wi, mode);
+		// Float pdf = PDF(wo, wi, mode, sampleFlags);
+		// BxDFFlags flags = BxDFFlags::DiffuseReflection;
+		// return BSDFSample(f_, wi, pdf, flags);
+		Float pdf = CosineHemispherePDF(AbsCosTheta(wi));
+
+        return BSDFSample(SampledSpectrum(reflectance * InvPi), wi, pdf, BxDFFlags::DiffuseReflection);
 	}
 
 	PBRT_CPU_GPU Float
 	PDF(Vector3f wo, Vector3f wi, TransportMode mode,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
-		float cosine = CosTheta(wo);
-		return CosineHemispherePDF(cosine);
+		if (!(sampleFlags & BxDFReflTransFlags::Reflection) ||
+			!SameHemisphere(wo, wi))
+			return 0;
+		// Float cosine = AbsCosTheta(wi);
+		// return CosineHemispherePDF(cosine);
+		return CosineHemispherePDF(AbsCosTheta(wi));
 	}
 
 	// BxDF::rho already implemented

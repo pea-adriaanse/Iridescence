@@ -30,14 +30,15 @@ class MeasuredMaterial;
 class SubsurfaceMaterial;
 class ThinDielectricMaterial;
 class MixMaterial;
+class LambertianMaterial; // Iri
 
 // Material Definition
 class Material
     : public TaggedPointer<  // Material Types
           CoatedDiffuseMaterial, CoatedConductorMaterial, ConductorMaterial,
           DielectricMaterial, DiffuseMaterial, DiffuseTransmissionMaterial, HairMaterial,
-          MeasuredMaterial, SubsurfaceMaterial, ThinDielectricMaterial, MixMaterial
-
+          MeasuredMaterial, SubsurfaceMaterial, ThinDielectricMaterial, MixMaterial,
+          LambertianMaterial
           > {
   public:
     // Material Interface
@@ -49,6 +50,8 @@ class Material
                            const FileLoc *loc, Allocator alloc);
 
     std::string ToString() const;
+
+    //Iri: GetBxDF missing???
 
     template <typename TextureEvaluator>
     inline BSDF GetBSDF(TextureEvaluator texEval, MaterialEvalContext ctx,
