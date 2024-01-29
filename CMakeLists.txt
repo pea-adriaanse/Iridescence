@@ -299,6 +299,7 @@ if(PBRT_USE_GPU)
           macro (cuda_compile_and_embed output_var cuda_file lib_name)
             add_library ("${lib_name}" OBJECT "${cuda_file}")
             set_property (TARGET "${lib_name}" PROPERTY CUDA_PTX_COMPILATION ON)
+            set_target_properties("${lib_name}" PROPERTIES CUDA_ARCHITECTURES "native")
 
             # disable "extern declaration... is treated as a static definition" warning
             if (CUDA_VERSION_MAJOR EQUAL 11 AND CUDA_VERSION_MINOR LESS 2)
@@ -860,6 +861,7 @@ target_compile_definitions (pbrt_lib PRIVATE ${PBRT_DEFINITIONS})
 # As per https://stackoverflow.com/a/51566919, this works around a cmake
 # bug that leads to undefined symbols...
 set_property(TARGET pbrt_lib PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+set_target_properties(pbrt_lib PROPERTIES CUDA_ARCHITECTURES "native")
 
 target_include_directories (pbrt_lib PUBLIC
   src
