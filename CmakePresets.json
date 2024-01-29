@@ -1,0 +1,46 @@
+{
+	"version": 8,
+	"cmakeMinimumRequired": {
+		"major": 3,
+		"minor": 28
+	},
+	"$schema": "https://raw.githubusercontent.com/Kitware/CMake/master/Help/manual/presets/schema.json",
+	"configurePresets": [
+		{
+			"name": "base",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"hidden": true
+		},
+		{
+			"name": "fast-compile-base",
+			"hidden": true,
+			"description": "Use pregenerated spectrum tables, speeds up compilation",
+			"inherits": [
+				"base"
+			],
+			"cacheVariables": {
+				"PBRT_USE_PREGENERATED_RGB_TO_SPECTRUM_TABLES": true
+			}
+		},
+		{
+			"name": "cpu-base",
+			"hidden": true,
+			"inherits": [
+				"base"
+			],
+			"cacheVariables": {
+				"PBRT_USE_GPU": false
+			}
+		},
+		{
+			"name": "gpu-base",
+			"hidden": true,
+			"inherits": [
+				"base"
+			],
+			"cacheVariables": {
+				"PBRT_USE_GPU": true
+			}
+		}
+	]
+}
