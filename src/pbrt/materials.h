@@ -24,6 +24,7 @@
 
 #include <pbrt/material_util.h>
 #include <iri/lambertianMaterial.hpp>
+#include <iri/principledMaterial.hpp>
 
 namespace pbrt{
 // DielectricMaterial Definition

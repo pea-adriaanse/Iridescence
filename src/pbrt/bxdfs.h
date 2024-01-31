@@ -25,6 +25,7 @@
 #include <string>
 
 #include <iri/lambertianBRDF.hpp>
+#include <iri/principledBRDF.hpp>
 
 namespace pbrt {
 
