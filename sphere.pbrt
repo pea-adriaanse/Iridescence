@@ -5,7 +5,8 @@ Camera "perspective" "float fov" 45
 
 Sampler "halton" "integer pixelsamples" 128
 #Integrator "volpath"
-Film "rgb" "string filename" "principled_m0_r01_dielectric.png"
+Integrator "path"
+Film "rgb" "string filename" "sphereRough2.png"
      "integer xresolution" [400] "integer yresolution" [400]
 
 WorldBegin
@@ -19,14 +20,22 @@ LightSource "distant"  "point3 from" [ -30 40  100 ]
 
 MakeNamedMaterial "SphereMat"
     "string type" [ "principled" ]
-    "float metallic" 0.1
-    "float roughness" 0.1
-    "float eta" 1.0
-    "float k" 3.1
-    #"string type" [ "lambertian" ]
-    #"float reflectance" 1.0
+      "float metallic" 0.0
+      "float roughness" 1
+      "float eta" 1.5
+      "float k" 1.0
     #"string type" [ "diffuse" ]
-    #"rgb reflectance" [1 1 1]
+      #"rgb reflectance" [1 1 1]
+    #"string type" [ "dielectric" ]
+      #"float eta" 1.5
+      #"float uroughness" 1
+      #"float vroughness" 1
+    #"string type" [ "conductor" ]
+      #"float eta" 1.5
+      #"float k" 3.1
+      ##"rgb reflectance" [1 1 1]
+      #"float uroughness" 1.0
+      #"float vroughness" 1.0
 
 AttributeBegin
   NamedMaterial "SphereMat"

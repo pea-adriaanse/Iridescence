@@ -19,6 +19,8 @@ PBRT_CPU_GPU inline Vector3f Reflect(Vector3f wo, Vector3f n) {
     return -wo + 2 * Dot(wo, n) * n;
 }
 
+// Assumed wi pointing up & eta as no/ni (=generally no)
+// In the case wi pointing down it takes the reciprical & inverts eta
 PBRT_CPU_GPU inline bool Refract(Vector3f wi, Normal3f n, Float eta, Float *etap,
                                  Vector3f *wt) {
     Float cosTheta_i = Dot(n, wi);
