@@ -24,8 +24,10 @@
 #include <limits>
 #include <string>
 
-#include <iri/lambertianBRDF.hpp>
-#include <iri/principledBRDF.hpp>
+// Iri: include bxdfs
+#include <iri/bxdfs/lambertianBRDF.hpp>
+#include <iri/bxdfs/principledBRDF.hpp>
+#include <iri/bxdfs/pyramidBRDF.hpp>
 
 namespace pbrt {
 

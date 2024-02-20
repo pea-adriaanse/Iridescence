@@ -1,4 +1,4 @@
-#include <iri/lambertianMaterial.hpp>
+#include <iri/materials/lambertianMaterial.hpp>
 
 namespace pbrt {
 LambertianMaterial *LambertianMaterial::Create(

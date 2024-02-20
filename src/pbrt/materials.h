@@ -23,8 +23,11 @@
 #include <type_traits>
 
 #include <pbrt/material_util.h>
-#include <iri/lambertianMaterial.hpp>
-#include <iri/principledMaterial.hpp>
+
+// Iri: include materials
+#include <iri/materials/lambertianMaterial.hpp>
+#include <iri/materials/principledMaterial.hpp>
+#include <iri/materials/pyramidMaterial.hpp>
 
 namespace pbrt{
 // DielectricMaterial Definition

@@ -12,7 +12,7 @@
 
 namespace pbrt {
 class PrincipledBRDF {
-   private:
+  private:
 	TrowbridgeReitzDistribution dist;
 	Float metallic;
 	pstd::complex<Float> eta = pstd::complex<Float>(
@@ -48,12 +48,14 @@ class PrincipledBRDF {
 
 		// find wm using snells law (or specular)
 		*eta_act = *reflected ? 1 : eta.re;
-		if (!*reflected && wo.z < 0)	 // TODO: light ? surface
+		if (!*reflected && wo.z < 0)  // TODO: light ? surface
 			*eta_act = 1 / *eta_act;
 		*wm = *eta_act * wi + wo;  // points into denser
-		if (LengthSquared(*wm) == 0) return false;
+		if (LengthSquared(*wm) == 0)
+			return false;
 		*wm = Normalize(*wm);
-		if (wm->z < 0) *wm *= -1;  // points up
+		if (wm->z < 0)
+			*wm *= -1;	// points up
 
 		if (SignBit(Dot(*wm, wo)) != SignBit(wo.z) ||
 			SignBit(Dot(*wm, wi)) != SignBit(wi.z))
@@ -106,11 +108,12 @@ class PrincipledBRDF {
 		Float denom = Sqr(cos_im + cos_om / eta_act) * cosTheta_i * cosTheta_o;
 		Float bsdf = num / denom;
 		bool inverseTracing = mode == TransportMode::Radiance;
-		if (inverseTracing) bsdf /= Sqr(eta_act);
+		if (inverseTracing)
+			bsdf /= Sqr(eta_act);
 		return SampledSpectrum(bsdf);
 	}
 
-   public:
+  public:
 	PrincipledBRDF() = default;
 	PBRT_CPU_GPU
 	PrincipledBRDF(TrowbridgeReitzDistribution dist, Float metallic,
@@ -118,7 +121,8 @@ class PrincipledBRDF {
 		: dist(dist), metallic(metallic), eta(eta) {}
 	// BxDF Interface:
 	PBRT_CPU_GPU BxDFFlags Flags() const {
-		if (dist.EffectivelySmooth()) return BxDFFlags::SpecularReflection;
+		if (dist.EffectivelySmooth())
+			return BxDFFlags::SpecularReflection;
 		return BxDFFlags::GlossyReflection;
 	}
 
@@ -130,13 +134,15 @@ class PrincipledBRDF {
 	/// Give BRDF given local wo & wi.
 	PBRT_CPU_GPU SampledSpectrum f(Vector3f wo, Vector3f wi,
 								   TransportMode mode) const {
-		if (!SameHemisphere(wo, wi) || dist.EffectivelySmooth()) return {};
+		if (!SameHemisphere(wo, wi) || dist.EffectivelySmooth())
+			return {};
 
 		Vector3f wm;
 		bool reflected;
 		Float eta_act;
 		bool valid = calcHalfVector(wo, wi, &wm, &reflected, &eta_act);
-		if (!valid) return {};
+		if (!valid)
+			return {};
 
 		Float R, T, Fc, Fd;
 		reflectProb(wo, Normal3f(wm), &R, &T, &Fc, &Fd);
@@ -160,7 +166,8 @@ class PrincipledBRDF {
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
 		bool reflect = sampleFlags & BxDFReflTransFlags::Reflection;
 		bool transmit = sampleFlags & BxDFReflTransFlags::Transmission;
-		if (!reflect & !transmit) return {};
+		if (!reflect & !transmit)
+			return {};
 
 		bool smooth = dist.EffectivelySmooth();
 		Vector3f normal = smooth ? Vector3f(0, 0, 1) : dist.Sample_wm(wo, u);
@@ -170,8 +177,10 @@ class PrincipledBRDF {
 		Float R, T, Fc, Fd;
 		Float Pr = reflectProb(wo, Normal3f(normal), &R, &T, &Fc, &Fd);
 		// Float sampleReflectProb = transmit * reflect * R + (!transmit);
-		if (!transmit) Pr = 1;
-		if (!reflect) Pr = 0;
+		if (!transmit)
+			Pr = 1;
+		if (!reflect)
+			Pr = 0;
 		Float Pt = 1 - Pr;
 
 		SampledSpectrum brdf;
@@ -180,7 +189,8 @@ class PrincipledBRDF {
 		bool sampleReflect = (uc <= Pr);
 		if (sampleReflect) {
 			Vector3f wi = Reflect(wo, normal);	// Vector3f(-wo.x, -wo.y, wo.z);
-			if (!SameHemisphere(wo, wi)) return {};
+			if (!SameHemisphere(wo, wi))
+				return {};
 
 			if (smooth) {
 				Float cosTheta = AbsCosTheta(wi);
@@ -197,10 +207,12 @@ class PrincipledBRDF {
 		} else {  // transmit
 			Vector3f wi;
 			bool totalInternalReflection = !(this->transmit(wo, &wi, normal));
-			if (totalInternalReflection) return {};
+			if (totalInternalReflection)
+				return {};
 
 			Float eta_act = eta.re;	 // actual eta along ray
-			if (wo.z < 0) eta_act = 1 / eta_act;
+			if (wo.z < 0)
+				eta_act = 1 / eta_act;
 
 			if (smooth) {
 				Float cosTheta = AbsCosTheta(wi);
@@ -226,21 +238,27 @@ class PrincipledBRDF {
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
 		bool reflectFlag = sampleFlags & BxDFReflTransFlags::Reflection;
 		bool transmitFlag = sampleFlags & BxDFReflTransFlags::Transmission;
-		if (!reflectFlag && !transmitFlag) return 0;
-		if (dist.EffectivelySmooth()) return 0;
-		if (wo.z == 0 || wi.z == 0) return 0;
+		if (!reflectFlag && !transmitFlag)
+			return 0;
+		if (dist.EffectivelySmooth())
+			return 0;
+		if (wo.z == 0 || wi.z == 0)
+			return 0;
 
 		Vector3f wm;
 		bool reflected;
 		Float eta_act;
 		bool valid = calcHalfVector(wo, wi, &wm, &reflected, &eta_act);
-		if (!valid) return 0;
+		if (!valid)
+			return 0;
 
 		// Sampling probabilities
 		Float R, T, Fc, Fd;
 		Float Pr = reflectProb(wo, Normal3f(wm), &R, &T, &Fc, &Fd);
-		if (!transmitFlag) Pr = 1;
-		if (!reflectFlag) Pr = 0;
+		if (!transmitFlag)
+			Pr = 1;
+		if (!reflectFlag)
+			Pr = 0;
 		Float Pt = 1 - Pr;
 
 		if (reflected) {  // TODO: into function

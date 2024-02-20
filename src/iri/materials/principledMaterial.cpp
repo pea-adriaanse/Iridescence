@@ -1,4 +1,4 @@
-#include <iri/principledMaterial.hpp>
+#include <iri/materials/principledMaterial.hpp>
 
 namespace pbrt {
 PrincipledMaterial *PrincipledMaterial::Create(

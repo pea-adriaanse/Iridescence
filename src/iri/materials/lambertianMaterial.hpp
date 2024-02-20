@@ -1,7 +1,7 @@
 #pragma once
 #include <pbrt/material_util.h>
 
-#include <iri/lambertianBRDF.hpp>
+#include <iri/bxdfs/lambertianBRDF.hpp>
 
 namespace pbrt {
 class LambertianMaterial {

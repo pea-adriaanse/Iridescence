@@ -546,7 +546,7 @@ set (PBRT_SOURCE
   )
 
 # Iridescence
-file(GLOB IRI_SOURCE CONFIGURE_DEPENDS src/iri/*.cpp)
+file(GLOB IRI_SOURCE CONFIGURE_DEPENDS src/iri/*/*.cpp)
 list(APPEND PBRT_SOURCE ${IRI_SOURCE})
 # pbrt again
 
@@ -580,7 +580,7 @@ set (PBRT_SOURCE_HEADERS
   )  
 
 # Iridescence
-file(GLOB IRI_SOURCE_HEADERS CONFIGURE_DEPENDS src/iri/*.hpp)
+file(GLOB IRI_SOURCE_HEADERS CONFIGURE_DEPENDS src/iri/*/*.hpp)
 list(APPEND PBRT_SOURCE_HEADERS ${IRI_SOURCE_HEADERS})
 # pbrt again
 

@@ -1,5 +1,5 @@
 
-#include <iri/lambertianBRDF.hpp>
+#include <iri/bxdfs/lambertianBRDF.hpp>
 
 namespace pbrt {
 std::string LambertianBRDF::ToString() const { return "LambertianBRDF"; }

@@ -1,7 +1,7 @@
 #pragma once
 #include <pbrt/material_util.h>
 
-#include <iri/principledBRDF.hpp>
+#include <iri/bxdfs/principledBRDF.hpp>
 
 namespace pbrt {
 class PrincipledMaterial {

@@ -30,9 +30,10 @@ class MeasuredMaterial;
 class SubsurfaceMaterial;
 class ThinDielectricMaterial;
 class MixMaterial;
-// Iri
+// Iri: include material forward declaration
 class LambertianMaterial;
 class PrincipledMaterial;
+class PyramidMaterial;
 
 // Material Definition
 class Material
@@ -40,7 +41,7 @@ class Material
           CoatedDiffuseMaterial, CoatedConductorMaterial, ConductorMaterial,
           DielectricMaterial, DiffuseMaterial, DiffuseTransmissionMaterial, HairMaterial,
           MeasuredMaterial, SubsurfaceMaterial, ThinDielectricMaterial, MixMaterial,
-          LambertianMaterial, PrincipledMaterial
+          LambertianMaterial, PrincipledMaterial, PyramidMaterial
           > {
   public:
     // Material Interface
