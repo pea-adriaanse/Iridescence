@@ -1,24 +1,23 @@
-LookAt 3 4 1.5  # eye
-       .5 .5 0  # look at point
-       0 0 1    # up vector
-Camera "perspective" "float fov" 45
+LookAt 0 5 -10  # eye
+       0 5 1  # look at point
+       0 1 0    # up vector
+Camera "perspective" "float fov" 90
 
-Sampler "halton" "integer pixelsamples" 128
+Sampler "halton" "integer pixelsamples" 156
 #Integrator "volpath"
 Integrator "path"
-Film "rgb" "string filename" "sphere2.png"
+Film "rgb" "string filename" "sphere.png"
      "integer xresolution" [400] "integer yresolution" [400]
 
 WorldBegin
-
-# uniform blue-ish illumination from all directions
+## uniform blue-ish illumination from all directions
 #LightSource "infinite" "rgb L" [ .4 .45 .5 ]
 
-# approximate the sun
-LightSource "distant"  "point3 from" [ -30 40  100 ]
-   "blackbody L" 3000 "float scale" 1.5
+## approximate the sun
+#LightSource "distant"  "point3 from" [ -30 40  100 ]
+#   "blackbody L" 3000 "float scale" 1.5
 
-MakeNamedMaterial "SphereMat"
+MakeNamedMaterial "CustomMat"
     "string type" [ "pyramid" ]
       "float peakHeight" 1.0
       "float angle" 54.7
@@ -43,17 +42,38 @@ MakeNamedMaterial "SphereMat"
       #"float vroughness" 1.0
 
 AttributeBegin
-  NamedMaterial "SphereMat"
-  Shape "sphere" "float radius" 1
+  NamedMaterial "CustomMat"
+  #Shape "sphere" "float radius" 1
+  Shape "bilinearmesh"
+    "point3 P" [-2 0.1 2  2 0.1 2  -2 0.1 -2  2 0.1 -2]
+    "point2 uv" [0 0  1 0  0 1  1 1]
+AttributeEnd
+
+#AttributeBegin
+#  Texture "checks" "spectrum" "checkerboard"
+#          "float uscale" [16] "float vscale" [16]
+#          "rgb tex1" [.1 .1 .1] "rgb tex2" [.8 .8 .8]
+#  Material "diffuse" "texture reflectance" "checks"
+#  Translate 0 0 -1
+#  Shape "bilinearmesh"
+#      "point3 P" [ -20 -20 0   20 -20 0   -20 20 0   20 20 0 ]
+#      "point2 uv" [ 0 0   1 0    1 1   0 1 ]
+#AttributeEnd
+
+AttributeBegin
+  AreaLightSource "diffuse" "rgb L" [1 1 1] "float power" 100
+  Shape "bilinearmesh" "point3 P" [-1 10 -1  1 10 -1  -1 10 1  1 10 1]
 AttributeEnd
 
 AttributeBegin
-  Texture "checks" "spectrum" "checkerboard"
-          "float uscale" [16] "float vscale" [16]
-          "rgb tex1" [.1 .1 .1] "rgb tex2" [.8 .8 .8]
-  Material "diffuse" "texture reflectance" "checks"
-  Translate 0 0 -1
-  Shape "bilinearmesh"
-      "point3 P" [ -20 -20 0   20 -20 0   -20 20 0   20 20 0 ]
-      "point2 uv" [ 0 0   1 0    1 1   0 1 ]
+  Material "diffuse" "rgb reflectance" [ 1.0 0.0 0.0] # Red
+  Shape "bilinearmesh" "point3 P" [-5 0 -12  -5 0 5  -5 10 -12  -5 10 5] # Left
+  Material "diffuse" "rgb reflectance" [ 0.0 1.0 0.0] # Green
+  Shape "bilinearmesh" "point3 P" [5 0 -12  5 0 5  5 10 -12  5 10 5] # Right
+  Material "diffuse" "rgb reflectance" [ 1.0 1.0 1.0] # White
+  Shape "bilinearmesh" "point3 P" [-5 0 -12  5 0 -12  -5 0 5  5 0 5] # Bottom
+  Shape "bilinearmesh" "point3 P" [-5 10 -12  5 10 -12  -5 10 5  5 10 5] # Top
+  Shape "bilinearmesh" "point3 P" [-5 0 5  5 0 5  -5 10 5  5 10 5] # Far
+  Material "diffuse" "rgb reflectance" [ 0.0 0.0 1.0] # Blue
+  Shape "bilinearmesh" "point3 P" [-5 0 -12  5 0 -12  -5 10 -12  5 10 -12] # Near
 AttributeEnd

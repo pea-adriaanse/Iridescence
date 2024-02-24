@@ -94,12 +94,7 @@ class PyramidBRDF {
 	PBRT_CPU_GPU Float
 	PDF(Vector3f wo, Vector3f wi, TransportMode mode,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
-		if (!(sampleFlags & BxDFReflTransFlags::Reflection) ||
-			!SameHemisphere(wo, wi))
-			return 0;
-		// Float cosine = AbsCosTheta(wi);
-		// return CosineHemispherePDF(cosine);
-		return CosineHemispherePDF(AbsCosTheta(wi));
+		return 0;
 	}
 
 	// BxDF::rho already implemented
