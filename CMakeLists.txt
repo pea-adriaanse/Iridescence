@@ -547,8 +547,11 @@ set (PBRT_SOURCE
 
 # Iridescence
 file(GLOB IRI_SOURCE CONFIGURE_DEPENDS src/iri/*/*.cpp)
+file(GLOB IRI_SOURCE_HEADERS CONFIGURE_DEPENDS src/iri/*/*.hpp)
+file(GLOB IRI_TEST_SOURCE CONFIGURE_DEPENDS src/iri/tests/*.cpp)
+list(REMOVE_ITEM IRI_SOURCE IRI_TEST_SOURCE)
+
 list(APPEND PBRT_SOURCE ${IRI_SOURCE})
-# pbrt again
 
 if (MSVC)
     set (PBRT_SOURCE ${PBRT_SOURCE} src/pbrt/visualstudio.natvis)
@@ -579,10 +582,8 @@ set (PBRT_SOURCE_HEADERS
   src/pbrt/textures.h
   )  
 
-# Iridescence
-file(GLOB IRI_SOURCE_HEADERS CONFIGURE_DEPENDS src/iri/*/*.hpp)
+#Iridescence
 list(APPEND PBRT_SOURCE_HEADERS ${IRI_SOURCE_HEADERS})
-# pbrt again
 
 SET (PBRT_CPU_SOURCE
   src/pbrt/cpu/aggregates.cpp
@@ -1104,6 +1105,9 @@ set (PBRT_TEST_SOURCE
   src/pbrt/util/transform_test.cpp
   src/pbrt/util/vecmath_test.cpp
   )
+
+# Iridescence
+list(APPEND PBRT_TEST_SOURCE ${IRI_TEST_SOURCE})
 
 add_executable (pbrt_test src/pbrt/cmd/pbrt_test.cpp ${PBRT_TEST_SOURCE})
 

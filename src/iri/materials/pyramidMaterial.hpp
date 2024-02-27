@@ -6,14 +6,13 @@
 
 namespace pbrt {
 class PyramidMaterial {
-  private:
+   private:
 	Image *normalMap;
 	FloatTexture peakHeight;
 	FloatTexture angle;
-	FloatTexture eta;
-	FloatTexture k;
+	FloatTexture reflectance;
 
-  public:
+   public:
 	using BxDF = PyramidBRDF;
 	using BSSRDF = void;
 
@@ -24,12 +23,11 @@ class PyramidMaterial {
 								   Allocator alloc);
 
 	PyramidMaterial(Image *normalMap, FloatTexture peakHeight,
-					FloatTexture angle, FloatTexture eta, FloatTexture k)
+					FloatTexture angle, FloatTexture reflectance)
 		: normalMap(normalMap),
 		  peakHeight(peakHeight),
 		  angle(angle),
-		  eta(eta),
-		  k(k) {}
+		  reflectance(reflectance) {}
 
 	std::string ToString() const;
 
@@ -38,10 +36,8 @@ class PyramidMaterial {
 							  SampledWavelengths &lambda) const {
 		Float h = texEval(peakHeight, ctx);
 		Float a = Clamp(texEval(angle, ctx), 0.0, PiOver2);
-		Float eta_ = texEval(eta, ctx);	 // TODO: does IOR have ranges?
-		Float k_ = texEval(k, ctx);
-		pstd::complex<Float> eta_complex = pstd::complex<Float>(eta_, k_);
-		return PyramidBRDF(h, a, eta_complex);
+		Float r = Clamp(texEval(reflectance, ctx), 0.0, 1.0);
+		return PyramidBRDF(h, a, r);
 	}
 
 	template <typename TextureEvaluator>
@@ -52,7 +48,7 @@ class PyramidMaterial {
 
 	template <typename TextureEvaluator>
 	PBRT_CPU_GPU bool CanEvaluateTextures(TextureEvaluator texEval) const {
-		return texEval.CanEvaluate({peakHeight, angle, eta, k}, {});
+		return texEval.CanEvaluate({peakHeight, angle, reflectance}, {});
 	}
 
 	PBRT_CPU_GPU const Image *GetNormalMap() const { return normalMap; }

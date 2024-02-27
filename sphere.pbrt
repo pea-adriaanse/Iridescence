@@ -1,9 +1,9 @@
-LookAt 0 5 -10  # eye
-       0 5 1  # look at point
+LookAt 2 5 -10  # eye
+       0 0 1  # look at point
        0 1 0    # up vector
 Camera "perspective" "float fov" 90
 
-Sampler "halton" "integer pixelsamples" 156
+Sampler "halton" "integer pixelsamples" 64
 #Integrator "volpath"
 Integrator "path"
 Film "rgb" "string filename" "sphere.png"
@@ -21,8 +21,7 @@ MakeNamedMaterial "CustomMat"
     "string type" [ "pyramid" ]
       "float peakHeight" 1.0
       "float angle" 54.7
-      "float eta" 1.5
-      "float k" 1.0
+      "float reflectance" 0.8
     #"string type" [ "principled" ]
       #"float metallic" 0.0
       #"float roughness" 1
@@ -41,13 +40,21 @@ MakeNamedMaterial "CustomMat"
       #"float uroughness" 1.0
       #"float vroughness" 1.0
 
-AttributeBegin
-  NamedMaterial "CustomMat"
-  #Shape "sphere" "float radius" 1
-  Shape "bilinearmesh"
-    "point3 P" [-2 0.1 2  2 0.1 2  -2 0.1 -2  2 0.1 -2]
-    "point2 uv" [0 0  1 0  0 1  1 1]
-AttributeEnd
+#AttributeBegin
+#  #NamedMaterial "CustomMat"
+#  Material "conductor" "rgb reflectance" [0.8 0.8 0.8]
+#  #Shape "sphere" "float radius" 1
+#  Shape "bilinearmesh"
+#    "point3 P" [-2 0.1 2  2 0.1 2  -2 0.1 -2  2 0.1 -2]
+#    "point2 uv" [0 0  1 0  0 1  1 1]
+#    "normal N" [0 1 0  0 1 0  0 1 0  0 1 0]
+##  Translate 0 5 0
+##  Rotate -66 1 0 0
+##  Rotate 20 0 0.33 0.66
+##  Shape "bilinearmesh"
+##    "point3 P" [-2 0 2  2 0 2  -2 0 -2  2 0 -2]
+##    "point2 uv" [0 0  1 0  0 1  1 1]
+#AttributeEnd
 
 #AttributeBegin
 #  Texture "checks" "spectrum" "checkerboard"
@@ -71,9 +78,17 @@ AttributeBegin
   Material "diffuse" "rgb reflectance" [ 0.0 1.0 0.0] # Green
   Shape "bilinearmesh" "point3 P" [5 0 -12  5 0 5  5 10 -12  5 10 5] # Right
   Material "diffuse" "rgb reflectance" [ 1.0 1.0 1.0] # White
-  Shape "bilinearmesh" "point3 P" [-5 0 -12  5 0 -12  -5 0 5  5 0 5] # Bottom
   Shape "bilinearmesh" "point3 P" [-5 10 -12  5 10 -12  -5 10 5  5 10 5] # Top
+
   Shape "bilinearmesh" "point3 P" [-5 0 5  5 0 5  -5 10 5  5 10 5] # Far
   Material "diffuse" "rgb reflectance" [ 0.0 0.0 1.0] # Blue
-  Shape "bilinearmesh" "point3 P" [-5 0 -12  5 0 -12  -5 10 -12  5 10 -12] # Near
+  Shape "bilinearmesh" "point3 P" [5 10 -12  -5 10 -12  5 0 -12  -5 0 -12] # Near
+
+  #NamedMaterial "CustomMat"
+  Material "conductor" "rgb reflectance" [1 1 1]
+# Bottom
+  Shape "bilinearmesh"
+    "point3 P" [-5 0 -12  5 0 -12  -5 0 5  5 0 5]
+    "point2 uv" [ 0 0  1 0  0 1  1 1 ]
+    "normal N" [0 1 0  0 1 0  0 1 0  0 1 0]
 AttributeEnd

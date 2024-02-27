@@ -1,21 +1,21 @@
 #pragma once
 #include <pbrt/base/bxdf.h>
-#include <pbrt/util/transform.h>
-#include <pbrt/util/scattering.h>
 #include <pbrt/util/math.h>
+#include <pbrt/util/scattering.h>
+#include <pbrt/util/transform.h>
 
 namespace pbrt {
 class PyramidBRDF {
-  private:
+   private:
 	Float peakHeight;
 	Float angle;
-	pstd::complex<Float> eta = pstd::complex<Float>(Float(0.0));
+	Float reflectance;
 
-  public:
+   public:
 	PyramidBRDF() = default;
 	PBRT_CPU_GPU
-	PyramidBRDF(Float peakHeight, Float angle, pstd::complex<Float> eta)
-		: peakHeight(peakHeight), angle(angle), eta(eta) {}
+	PyramidBRDF(Float peakHeight, Float angle, Float reflectance)
+		: peakHeight(peakHeight), angle(angle), reflectance(reflectance) {}
 	// BxDF Interface:
 	// TODO: used by ??
 	PBRT_CPU_GPU BxDFFlags Flags() const {
@@ -44,31 +44,27 @@ class PyramidBRDF {
 		TransportMode mode = TransportMode::Radiance,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
 		// Pre definitions
-		Vector3f tangent = Vector3f(
-			1, 0, 0);  // TODO: configurable (should be tangential to z)
-		Float angleToNormal = Radians(90.0 - 54.7);
+		Vector3f tangent = Vector3f(0, 0, 1);
+		tangent = RotateX(-angle)(tangent);
 
 		// Determine normals & relative areas
 		Vector3f normals[4];
 		Float areas[4];
 		for (int i = 0; i < 4; i++) {
+			// Local frame has X along dpdu & Z along normal (with Y along
+			// (Z×X))
 			normals[i] = RotateZ(90.0 * i)(tangent);
-			normals[i] = std::sin(angleToNormal) * Vector3f(0, 0, 1) +
-						 std::cos(angleToNormal) * normals[i];
-			normals[i] = Normalize(normals[i]);
-
 			areas[i] = Dot(normals[i], wo);
-			if(areas[i] < 0) areas[i] = 0;
+			if (areas[i] < 0) areas[i] = 0;
 		}
 
 		// Determine probabilities
 		Float sum = areas[0] + areas[1] + areas[2] + areas[3];
-		if (sum <= 0)
-			return {};	// Invalid
+		if (sum <= 0) return {};  // Invalid
 		Float runningSum = 0.0;
 		Float probs[4];
 		for (int i = 0; i < 4; i++) {
-			probs[i] = runningSum + areas[i] / sum;
+			probs[i] = runningSum + (areas[i] / sum);
 			runningSum += probs[i];
 		}
 
@@ -83,12 +79,17 @@ class PyramidBRDF {
 			}
 		}
 
-		Vector3f wi = Reflect(wo, normal);
-		Float cosTheta = Dot(wo, normal);
-		Float fresnel = FrComplex(cosTheta, eta);
+		// TEMP TEST
+		// normal = normals[(int) peakHeight];
+		// pdf = 1;
 
-		return BSDFSample(SampledSpectrum(fresnel / AbsCosTheta(wi)), wi, pdf,
-						  BxDFFlags::SpecularReflection);
+		Vector3f wi = Reflect(wo, normal);
+		# TODO: use or not?
+		if (wi.z < 0) return {};
+		Float cosTheta = Dot(wo, normal);
+
+		return BSDFSample(SampledSpectrum(reflectance / AbsCosTheta(wi)), wi,
+						  pdf, BxDFFlags::SpecularReflection);
 	}
 
 	PBRT_CPU_GPU Float
