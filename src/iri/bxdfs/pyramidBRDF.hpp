@@ -84,7 +84,7 @@ class PyramidBRDF {
 		// pdf = 1;
 
 		Vector3f wi = Reflect(wo, normal);
-		# TODO: use or not?
+		// TODO: use or not?
 		if (wi.z < 0) return {};
 		Float cosTheta = Dot(wo, normal);
 
