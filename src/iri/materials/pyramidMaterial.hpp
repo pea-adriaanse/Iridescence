@@ -35,7 +35,7 @@ class PyramidMaterial {
 	PBRT_CPU_GPU BxDF GetBxDF(TextureEvaluator texEval, MaterialEvalContext ctx,
 							  SampledWavelengths &lambda) const {
 		Float h = texEval(peakHeight, ctx);
-		Float a = Clamp(texEval(angle, ctx), 0.0, PiOver2);
+		Float a = Clamp(texEval(angle, ctx), 0.0, 90.0);
 		Float r = Clamp(texEval(reflectance, ctx), 0.0, 1.0);
 		return PyramidBRDF(h, a, r);
 	}

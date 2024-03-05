@@ -61,11 +61,13 @@ class PyramidBRDF {
 		// Determine probabilities
 		Float sum = areas[0] + areas[1] + areas[2] + areas[3];
 		if (sum <= 0) return {};  // Invalid
+
+		// Build PDF
 		Float runningSum = 0.0;
 		Float probs[4];
 		for (int i = 0; i < 4; i++) {
-			probs[i] = runningSum + (areas[i] / sum);
-			runningSum += probs[i];
+			runningSum += areas[i]/sum;
+			probs[i] = runningSum;
 		}
 
 		// Choose normal
