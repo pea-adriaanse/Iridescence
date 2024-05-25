@@ -1107,7 +1107,7 @@ set (PBRT_TEST_SOURCE
   )
 
 # Iridescence
-list(APPEND PBRT_TEST_SOURCE ${IRI_TEST_SOURCE})
+list(PREPEND PBRT_TEST_SOURCE ${IRI_TEST_SOURCE}) # Prepending changes test order
 
 add_executable (pbrt_test src/pbrt/cmd/pbrt_test.cpp ${PBRT_TEST_SOURCE})
 

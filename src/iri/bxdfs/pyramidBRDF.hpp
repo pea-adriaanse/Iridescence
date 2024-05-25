@@ -4,6 +4,8 @@
 #include <pbrt/util/scattering.h>
 #include <pbrt/util/transform.h>
 
+#include <cstdio>
+
 namespace pbrt {
 class PyramidBRDF {
   private:
@@ -11,6 +13,7 @@ class PyramidBRDF {
 	Float angle;
 	Float angleRad;
 	Float reflectance;
+	Vector3f normals[4];
 
   public:
 	PyramidBRDF() = default;
@@ -19,7 +22,16 @@ class PyramidBRDF {
 		: peakHeight(peakHeight),
 		  angle(angle),
 		  angleRad(Radians(angle)),
-		  reflectance(reflectance) {}
+		  reflectance(reflectance) {
+		// Determine normals
+		Float normalZ = std::cos(angleRad);
+		Float normalXY = std::sin(angleRad);
+
+		this->normals[0] = Vector3f(normalXY, 0, normalZ);
+		this->normals[1] = Vector3f(0, normalXY, normalZ);
+		this->normals[2] = Vector3f(-normalXY, 0, normalZ);
+		this->normals[3] = Vector3f(0, -normalXY, normalZ);
+	}
 	// BxDF Interface:
 	// TODO: used by ??
 	PBRT_CPU_GPU BxDFFlags Flags() const {
@@ -37,18 +49,20 @@ class PyramidBRDF {
 		return SampledSpectrum(0.0f);
 	}
 
-	PBRT_CPU_GPU int pow4(int exponent) const { return 1 << (2 * exponent); }
+	PBRT_CPU_GPU static constexpr int pow4(int exponent) {
+		return 1 << (2 * exponent);
+	}
 
 	PBRT_CPU_GPU void determineProbs(Vector3f inDir, Float prevProb,
 									 int levelOffset, int saveOffset,
 									 Float* exitProbPtr, Vector3f* outDirPtr,
-									 int level, int maxLevel,
-									 Vector3f (&normals)[4]) const {
+									 int level, int maxLevel) const {
 		// Calculate relative probability
 		Float probRelList[4];
 		Float cosSum = 0;
 		for (int face = 0; face < 4; face++) {
-			probRelList[face] = Dot(normals[face], inDir);
+			Float prob = Dot(normals[face], inDir);
+			probRelList[face] = prob > 0 ? prob : 0;
 			cosSum += probRelList[face];
 		}
 		if (cosSum != 0)
@@ -87,8 +101,7 @@ class PyramidBRDF {
 				levelOffset + face * pow4(level);  // f*4 -> 4+f*16 -> 20+f*64
 			Float prob = probRelList[face] * (1.0 - probExitList[face]);
 			determineProbs(outDirList[face], prob, newLevelOffset, offset,
-						   exitProbPtr, outDirPtr, level + 1, maxLevel,
-						   normals);
+						   exitProbPtr, outDirPtr, level + 1, maxLevel);
 		}
 	}
 
@@ -102,27 +115,20 @@ class PyramidBRDF {
 		Vector3f wo, Float uc, Point2f u,
 		TransportMode mode = TransportMode::Radiance,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
-		// Pre definitions
-		Float normalZ = std::cos(angleRad);
-		Float normalXY = std::sin(angleRad);
-
-		// Determine normals
-		Vector3f normals[4] = {
-			Vector3f(normalXY, 0, normalZ), Vector3f(0, normalXY, normalZ),
-			Vector3f(-normalXY, 0, normalZ), Vector3f(0, -normalXY, normalZ)};
-
 		// Determine probabilities
+		constexpr int maxLevels = 1;
+		constexpr int optionCount = pow4(maxLevels);
 		// Float relativeProb[4 * 4 * 4];
-		Float exitProb[4 * 4 * 4];
-		Vector3f outDir[4 * 4 * 4];
-		determineProbs(wo, Float(1.0), 0, 0, exitProb, outDir, 1, 3, normals);
+		Float exitProb[optionCount];
+		Vector3f outDir[optionCount];
+		determineProbs(wo, Float(1.0), 0, 0, exitProb, outDir, 1, maxLevels);
 
 		// Build CDF & choose
 		// Float cumulativeProb[4*4*4];
 		int choice;
 		bool trapped = true;  // sampled not to escape
 		Float prob = 0.0;
-		for (int i = 0; i < 4 * 4 * 4; i++) {
+		for (int i = 0; i < optionCount; i++) {
 			prob += exitProb[i];
 			// cumulativeProb[i] = prob;
 			if (uc < prob) {
@@ -131,6 +137,7 @@ class PyramidBRDF {
 				break;
 			}
 		}
+
 		if (trapped)	// light trapped
 			return {};	// TODO: should this return valid light value of
 						// intensity 0?
@@ -143,36 +150,39 @@ class PyramidBRDF {
 		// Float cosTheta = Dot(wo, normal);
 
 		// return BSDFSample(SampledSpectrum(reflectance / AbsCosTheta(wi)), wi,
-		// pdf, BxDFFlags::SpecularReflection);
+		// 				  pdf, BxDFFlags::SpecularReflection);
 		return BSDFSample(SampledSpectrum(brdf), wi, pdf,
 						  BxDFFlags::SpecularReflection);
 	}
 
-	PBRT_CPU_GPU Float shadowing_lyanne(Vector3f v) const {
-		Float thetaNormal = Radians(angle);
-		Float cosThetaV = CosTheta(v);
-		Float inp = std::cos(std::abs(std::acos(cosThetaV) - thetaNormal));
-		Float inp2 = cosThetaV * std::cos(thetaNormal);	 // Actual Inproduct
-
-		Float numerator = 4.0 * std::cos(thetaNormal) * cosThetaV;
-		Float denominator = inp + 2 * inp2;
-		if (numerator > denominator)
-			return Float(1.0);
-		return numerator / denominator;
+	PBRT_CPU_GPU Float G1(Vector3f wo, Vector3f n) const {
+		return shadowing_lyanne(wo, n);
+		// TODO: own G1
 	}
 
-	PBRT_CPU_GPU Vector3f zeroAzimuth(Vector3f w) const {
+	PBRT_CPU_GPU static Vector3f zeroAzimuth(Vector3f w) {
 		// "Rotate" wo back to wr with azimuth=phi=0
 		Float x = std::sqrt(1.0 - w.z * w.z);
 		return Vector3f(x, 0, w.z);
 	}
 
-	PBRT_CPU_GPU Float G1(Vector3f wo, Vector3f w) const {
-		if(Dot(wo, w) < 0.0)
+	PBRT_CPU_GPU Float shadowing_lyanne(Vector3f o, Vector3f v) const {
+		if (Dot(o, v) < 0.0)
 			return Float(0.0);
-		Vector3f wr = zeroAzimuth(wo);
-		return shadowing_lyanne(wr);
-		// Vector3f g =
+		Vector3f r = zeroAzimuth(o);
+
+		Float rg = CosTheta(r);
+		Float D = 1 / 4 * std::cos(angleRad);
+		Float rf = r.z * normals[0].z;	// or simple * cos(alphaRad)
+
+		Float numerator = rg;
+		Float denominator = D * 3 * rf;
+		Float shadowing = numerator / denominator;
+
+		if (shadowing > 1.0)
+			shadowing = 1.0;
+
+		return shadowing;
 	}
 
 	PBRT_CPU_GPU Float
