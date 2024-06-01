@@ -1,7 +1,7 @@
 #Scale 0.5 0.5 0.5
-LookAt 0 5 -5  # eye
-       0 0 5  # look at point
-       0 1 0   # up vector
+LookAt 0 7 0  # eye
+       0 0 0  # look at point
+       0 0 1   # up vector
 Camera "perspective" "float fov" 90
 #Camera "orthographic" #"float screenwindow" [-2 2 -2 2]
 
@@ -17,7 +17,7 @@ MakeNamedMaterial "CustomMat"
     "string type" [ "pyramid" ]
       "float peakHeight" 1.0
       "float angle" 45
-      "float reflectance" 0.8
+      "integer reflectCount" 3
     #"string type" [ "principled" ]
       #"float metallic" 0.0
       #"float roughness" 1

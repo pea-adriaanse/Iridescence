@@ -32,6 +32,13 @@ class PyramidTest : public testing::Test {
 	~PyramidTest() {}
 };
 
+TEST_F(PyramidTest, pow4Test) {
+	EXPECT_EQ(1, PyramidBRDF::pow4(0));
+	EXPECT_EQ(4, PyramidBRDF::pow4(1));
+	EXPECT_EQ(16, PyramidBRDF::pow4(2));
+	EXPECT_EQ(64, PyramidBRDF::pow4(3));
+}
+
 TEST_F(PyramidTest, G1) {
 	Vector3f wo = Vector3f(0, 0, 1);
 	Float shadow = brdf.G1(wo, normals[0]);
@@ -44,18 +51,17 @@ TEST_F(PyramidTest, GenProbability1) {
 
 	// Float relativeProb[4 * 4 * 4];
 	Float exitProb[optionCount];
-	Float* eptr = &exitProb[0];
 	Vector3f outDir[optionCount];
+	Float brdfs[optionCount];
 
 	Vector3f wo = Vector3f(0, 0, 1);
 	Float prevProb = 1.0;
-	int levelOffset = 0;
 	int saveOffset = 0;
 	int level = 1;
 	int maxLevel = 1;
 
-	brdf.determineProbs(wo, prevProb, levelOffset, saveOffset, exitProb, outDir,
-						level, maxLevel);
+	brdf.determineProbs(wo, prevProb, saveOffset, exitProb, outDir,
+						brdfs, level, maxLevel);
 
 	for (int i = 0; i < 4; i++) {
 		EXPECT_EQ(outDir[i], Reflect(wo, normals[i]));
