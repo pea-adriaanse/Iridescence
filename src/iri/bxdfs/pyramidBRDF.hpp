@@ -8,7 +8,7 @@
 
 namespace pbrt {
 class PyramidBRDF {
-  private:
+   private:
 	Float peakHeight;
 	Float angle;
 	Float angleRad;
@@ -16,7 +16,7 @@ class PyramidBRDF {
 	int reflectCount;
 	Vector3f normals[4];
 
-  public:
+   public:
 	static constexpr int maxLevels = 3;
 	PyramidBRDF() = default;
 	PBRT_CPU_GPU
@@ -71,8 +71,9 @@ class PyramidBRDF {
 			Float cos = Dot(normals[face], inDir);
 			cos = cos > 0 ? cos : 0;
 			cosList[face] = cos;
-			// Float shadowing = G1(inDir, normals[face]); Shadowing identical for all normals
-			Float relProb = cos;// * shadowing;
+			// Float shadowing = G1(inDir, normals[face]); Shadowing identical
+			// for all normals
+			Float relProb = cos;  // * shadowing;
 			relProbSum += relProb;
 			probRelList[face] = relProb;
 		}
@@ -117,15 +118,14 @@ class PyramidBRDF {
 			*(brdfPtr + saveOffset + face) = brdfList[face];
 		}
 
-		if (level == maxLevel)
-			return;
+		if (level == maxLevel) return;
 
 		for (int face = 0; face < 4; face++) {
 			int offset = (saveOffset + face + 1) * 4;
 			Float prob = probRelList[face] * (1.0 - probExitList[face]);
-			Vector3f newInDir = -outDirList[face]; // flip direction
-			determineProbs(newInDir, prob, offset, exitProbPtr,
-						   outDirPtr, brdfPtr, level + 1, maxLevel);
+			Vector3f newInDir = -outDirList[face];	// flip direction
+			determineProbs(newInDir, prob, offset, exitProbPtr, outDirPtr,
+						   brdfPtr, level + 1, maxLevel);
 		}
 	}
 
@@ -149,18 +149,25 @@ class PyramidBRDF {
 		determineProbs(wo, Float(1.0), 0, exitProb, outDir, brdf, 1,
 					   reflectCount);
 
-		FILE* file = fopen("debug.txt", "w");
-		fprintf(file, "%f %f %f\n", wo[0], wo[1], wo[2]);
-		fprintf(file, "%f %f %f\n", normals[0][0], normals[0][1], wo[2]);
-		for (int i = 0; i < optionCount; i++) {
-			fprintf(file, "%f %f %f (%f)\n", outDir[i][0], outDir[i][1],
-					outDir[i][2], exitProb[i]);
-			fflush(file);
-		}
-		int closeRes = fclose(file);
-		if(closeRes!=0){
-			fprintf(stderr, "fclose error\n");
-		}
+		// FILE* file = fopen("debug.txt", "w");
+		// fprintf(file, "%f %f %f\n", wo[0], wo[1], wo[2]);
+
+		// fprintf(file, "%f\n", angle);
+		// fprintf(file, "%f %f %f\n", angleRad, std::sin(angleRad), std::cos(angleRad));
+		// fprintf(file, "%f %f %f\n", normals[0][0], normals[0][1],
+		// 		normals[0][2]);
+		// Vector3f temp = Reflect(Vector3f(0,0,1),normals[0]);
+		// fprintf(file, "%f %f %f\n", temp[0], temp[1], temp[2]);
+
+		// for (int i = 0; i < optionCount; i++) {
+		// 	fprintf(file, "%f %f %f (%f)\n", outDir[i][0], outDir[i][1],
+		// 			outDir[i][2], exitProb[i]);
+		// 	fflush(file);
+		// }
+		// int closeRes = fclose(file);
+		// if (closeRes != 0) {
+		// 	fprintf(stderr, "fclose error\n");
+		// }
 
 		// Build CDF & choose
 		// Float cumulativeProb[4*4*4];
@@ -207,13 +214,11 @@ class PyramidBRDF {
 	}
 
 	PBRT_CPU_GPU Float shadowing_lyanne(Vector3f o, Vector3f v) const {
-		if (Dot(o, v) < 0.0)
-			return Float(0.0);
+		if (Dot(o, v) < 0.0) return Float(0.0);
 		Vector3f r = zeroAzimuth(o);
 
 		Float rg = CosTheta(r);
-		if (rg <= 0.0)
-			return 0.0;
+		if (rg <= 0.0) return 0.0;
 		Float D = 1 / 4 * std::cos(angleRad);
 		Float rfe = r.z * normals[0].z;	 // or simple * cos(alphaRad)
 		Float rfo = std::cos(angleRad) * CosTheta(r);
@@ -222,8 +227,7 @@ class PyramidBRDF {
 		Float denominator = D * (rfe + 2 * rfo);
 		Float shadowing = numerator / denominator;
 
-		if (shadowing >= 1.0)
-			return 1.0;
+		if (shadowing >= 1.0) return 1.0;
 		return shadowing;
 	}
 

@@ -5,7 +5,7 @@ LookAt 0 7 0  # eye
 Camera "perspective" "float fov" 90
 #Camera "orthographic" #"float screenwindow" [-2 2 -2 2]
 
-Sampler "halton" "integer pixelsamples" 16
+Sampler "halton" "integer pixelsamples" 8
 Integrator "path"
 Film "rgb" "string filename" "cornell.png"
      "integer xresolution" [400] "integer yresolution" [400]
@@ -16,7 +16,7 @@ WorldBegin
 MakeNamedMaterial "CustomMat"
     "string type" [ "pyramid" ]
       "float peakHeight" 1.0
-      "float angle" 45
+      "float angle" 54.7
       "integer reflectCount" 3
     #"string type" [ "principled" ]
       #"float metallic" 0.0
