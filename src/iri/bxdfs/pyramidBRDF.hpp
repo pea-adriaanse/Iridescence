@@ -8,7 +8,7 @@
 
 namespace pbrt {
 class PyramidBRDF {
-   private:
+  private:
 	Float peakHeight;
 	Float angle;
 	Float angleRad;
@@ -16,7 +16,7 @@ class PyramidBRDF {
 	int reflectCount;
 	Vector3f normals[4];
 
-   public:
+  public:
 	static constexpr int maxLevels = 3;
 	PyramidBRDF() = default;
 	PBRT_CPU_GPU
@@ -61,71 +61,54 @@ class PyramidBRDF {
 
 	PBRT_CPU_GPU void determineProbs(Vector3f inDir, Float prevProb,
 									 int saveOffset, Float* exitProbPtr,
-									 Vector3f* outDirPtr, Float* brdfPtr,
-									 int level, int maxLevel) const {
-		// Calculate relative probability
-		Float cosList[4];
-		Float probRelList[4];
-		Float relProbSum = 0;
+									 Vector3f* outDirPtr, int level,
+									 int maxLevel) const {
+		Float probList[4];
+		Float probSum = 0;
+
+		// Calculate probabilities
 		for (int face = 0; face < 4; face++) {
 			Float cos = Dot(normals[face], inDir);
 			cos = cos > 0 ? cos : 0;
-			cosList[face] = cos;
-			// Float shadowing = G1(inDir, normals[face]); Shadowing identical
-			// for all normals
-			Float relProb = cos;  // * shadowing;
-			relProbSum += relProb;
-			probRelList[face] = relProb;
+			probSum += cos;
+			probList[face] = cos;
 		}
-		if (relProbSum != 0)
+		if (probSum != 0)
 			for (int face = 0; face < 4; face++) {
-				probRelList[face] /= relProbSum;
-				probRelList[face] *= prevProb;
+				probList[face] /= probSum;	// normalize
+				probList[face] *= prevProb;
 			}
-		// TODO: CHECK IF DIRECTIONS ARE HANDLED CORRECTLY (EG WO AND REFLECTION
-		// AND SUBSEQUENT USE) Calculate exit probability
+
 		// Calculate out dirs
 		Vector3f outDirList[4];
-		for (int face = 0; face < 4; face++) {
+		for (int face = 0; face < 4; face++)
 			outDirList[face] = Reflect(inDir, normals[face]);
-		}
 
+		// Calculate exit probability & shadowing
 		Float probExitList[4];
+		Float shadows[4];
 		for (int face = 0; face < 4; face++) {
 			Float shadow = G1(outDirList[face], normals[face]);
-			// if (shadow < 0)
-			// 	fprintf(stderr, "%f\n", shadow);
-			probExitList[face] = probRelList[face] * shadow;
-		}
-
-		// Calculate brdf
-		Float brdfList[4];
-		for (int face = 0; face < 4; face++) {
-			// TODO: fresnel? semiconductor -> . . . ?
-			// TODO: Should brdf be scaled down by probability/ratio? (im
-			// guessing yes)
-			brdfList[face] =
-				1 / cosList[face];	// based on perfect specular, though this
-									// has only 1 exit direction
-			// Actually this seems wrong, it should only be cos of original wo
+			shadows[face] = shadow;
+			probExitList[face] = shadow * probList[face];
 		}
 
 		// Save results
 		for (int face = 0; face < 4; face++) {
-			// *(relProbPtr + saveOffset + face) = probRelList[face];
 			*(exitProbPtr + saveOffset + face) = probExitList[face];
 			*(outDirPtr + saveOffset + face) = outDirList[face];
-			*(brdfPtr + saveOffset + face) = brdfList[face];
 		}
 
-		if (level == maxLevel) return;
+		if (level == maxLevel)
+			return;
 
+		// Recurse to next bounces
 		for (int face = 0; face < 4; face++) {
 			int offset = (saveOffset + face + 1) * 4;
-			Float prob = probRelList[face] * (1.0 - probExitList[face]);
+			Float prob = probList[face] * (1.0 - shadows[face]);
 			Vector3f newInDir = -outDirList[face];	// flip direction
 			determineProbs(newInDir, prob, offset, exitProbPtr, outDirPtr,
-						   brdfPtr, level + 1, maxLevel);
+						   level + 1, maxLevel);
 		}
 	}
 
@@ -143,31 +126,29 @@ class PyramidBRDF {
 		constexpr int maxOptionCount = pow4sum(maxLevels);
 		Float exitProb[maxOptionCount];
 		Vector3f outDir[maxOptionCount];
-		Float brdf[maxOptionCount];
 
 		int optionCount = pow4sum(reflectCount);
-		determineProbs(wo, Float(1.0), 0, exitProb, outDir, brdf, 1,
-					   reflectCount);
+		determineProbs(wo, Float(1.0), 0, exitProb, outDir, 1, reflectCount);
 
-		// FILE* file = fopen("debug.txt", "w");
-		// fprintf(file, "%f %f %f\n", wo[0], wo[1], wo[2]);
-
-		// fprintf(file, "%f\n", angle);
-		// fprintf(file, "%f %f %f\n", angleRad, std::sin(angleRad), std::cos(angleRad));
-		// fprintf(file, "%f %f %f\n", normals[0][0], normals[0][1],
-		// 		normals[0][2]);
-		// Vector3f temp = Reflect(Vector3f(0,0,1),normals[0]);
-		// fprintf(file, "%f %f %f\n", temp[0], temp[1], temp[2]);
-
-		// for (int i = 0; i < optionCount; i++) {
-		// 	fprintf(file, "%f %f %f (%f)\n", outDir[i][0], outDir[i][1],
-		// 			outDir[i][2], exitProb[i]);
-		// 	fflush(file);
-		// }
-		// int closeRes = fclose(file);
-		// if (closeRes != 0) {
-		// 	fprintf(stderr, "fclose error\n");
-		// }
+#ifdef PBRT_DEBUG_BUILD
+		FILE* file = fopen("debug.txt", "w");
+		fprintf(file, "%f, %f, %f\n", wo[0], wo[1], wo[2]);
+		fprintf(file, "%f, %f, %f\n", normals[0][0], normals[0][1],
+				normals[0][2]);
+		Float exitSum = 0;
+		for (int i = 0; i < optionCount; i++) {
+			fprintf(file, "%f, %f, %f, %f\n", outDir[i][0], outDir[i][1],
+					outDir[i][2], exitProb[i]);
+			fflush(file);
+			exitSum += exitProb[i];
+		}
+		fprintf(file, "%f\n", exitSum);
+		fflush(file);
+		int closeRes = fclose(file);
+		if (closeRes != 0) {
+			fprintf(stderr, "fclose error\n");
+		}
+#endif
 
 		// Build CDF & choose
 		// Float cumulativeProb[4*4*4];
@@ -190,15 +171,13 @@ class PyramidBRDF {
 
 		Vector3f wi = outDir[choice];
 		Float pdf = exitProb[choice];
-		// Float f = brdf[choice];
-		Float f = 1 / CosTheta(wo);
-		// TODO: actual light value . . .
+		Float brdf = 1 / AbsCosTheta(wo);
 
 		// Float cosTheta = Dot(wo, normal);
 
 		// return BSDFSample(SampledSpectrum(reflectance / AbsCosTheta(wi)), wi,
 		// 				  pdf, BxDFFlags::SpecularReflection);
-		return BSDFSample(SampledSpectrum(f), wi, pdf,
+		return BSDFSample(SampledSpectrum(brdf), wi, pdf,
 						  BxDFFlags::SpecularReflection);
 	}
 
@@ -214,11 +193,13 @@ class PyramidBRDF {
 	}
 
 	PBRT_CPU_GPU Float shadowing_lyanne(Vector3f o, Vector3f v) const {
-		if (Dot(o, v) < 0.0) return Float(0.0);
+		if (Dot(o, v) < 0.0)
+			return Float(0.0);
 		Vector3f r = zeroAzimuth(o);
 
 		Float rg = CosTheta(r);
-		if (rg <= 0.0) return 0.0;
+		if (rg <= 0.0)
+			return 0.0;
 		Float D = 1 / 4 * std::cos(angleRad);
 		Float rfe = r.z * normals[0].z;	 // or simple * cos(alphaRad)
 		Float rfo = std::cos(angleRad) * CosTheta(r);
@@ -227,7 +208,8 @@ class PyramidBRDF {
 		Float denominator = D * (rfe + 2 * rfo);
 		Float shadowing = numerator / denominator;
 
-		if (shadowing >= 1.0) return 1.0;
+		if (shadowing >= 1.0)
+			return 1.0;
 		return shadowing;
 	}
 
