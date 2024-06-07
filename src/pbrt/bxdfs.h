@@ -28,6 +28,7 @@
 #include <iri/bxdfs/lambertianBRDF.hpp>
 #include <iri/bxdfs/principledBRDF.hpp>
 #include <iri/bxdfs/pyramidBRDF.hpp>
+#include <iri/bxdfs/specularBRDF.hpp>
 
 namespace pbrt {
 

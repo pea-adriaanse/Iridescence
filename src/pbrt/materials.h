@@ -28,6 +28,7 @@
 #include <iri/materials/lambertianMaterial.hpp>
 #include <iri/materials/principledMaterial.hpp>
 #include <iri/materials/pyramidMaterial.hpp>
+#include <iri/materials/specularMaterial.hpp>
 
 namespace pbrt{
 // DielectricMaterial Definition

@@ -723,6 +723,8 @@ Material Material::Create(
 			LambertianMaterial::Create(parameters, normalMap, loc, alloc);
 	else if (name == "pyramid")
 		material = PyramidMaterial::Create(parameters, normalMap, loc, alloc);
+	else if (name == "specular")
+		material = SpecularMaterial::Create(parameters, normalMap, loc, alloc);
 	else if (name == "diffuse")
 		material = DiffuseMaterial::Create(parameters, normalMap, loc, alloc);
 	else if (name == "coateddiffuse")

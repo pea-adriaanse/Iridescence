@@ -167,13 +167,14 @@ class CoatedConductorBxDF;
 class LambertianBRDF;
 class PrincipledBRDF;
 class PyramidBRDF;
+class SpecularBRDF;
 
 // BxDF Definition
 class BxDF
     : public TaggedPointer<DiffuseTransmissionBxDF, DiffuseBxDF, CoatedDiffuseBxDF,
                            CoatedConductorBxDF, DielectricBxDF, ThinDielectricBxDF,
                            HairBxDF, MeasuredBxDF, ConductorBxDF, NormalizedFresnelBxDF,
-                           LambertianBRDF, PrincipledBRDF, PyramidBRDF> {
+                           LambertianBRDF, PrincipledBRDF, PyramidBRDF, SpecularBRDF> {
   public:
     // BxDF Interface
     PBRT_CPU_GPU inline BxDFFlags Flags() const;
