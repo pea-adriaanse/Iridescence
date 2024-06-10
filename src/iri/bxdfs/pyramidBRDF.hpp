@@ -4,6 +4,7 @@
 #include <pbrt/util/scattering.h>
 #include <pbrt/util/transform.h>
 
+#include <cmath>
 #include <cstdio>
 
 namespace pbrt {
@@ -105,7 +106,7 @@ class PyramidBRDF {
 		// Recurse to next bounces
 		for (int face = 0; face < 4; face++) {
 			int offset = (saveOffset + face + 1) * 4;
-			Float prob = probList[face] * (1.0 - shadows[face]);
+			Float prob = probList[face] - probExitList[face];
 			Vector3f newInDir = -outDirList[face];	// flip direction
 			determineProbs(newInDir, prob, offset, exitProbPtr, outDirPtr,
 						   level + 1, maxLevel);
@@ -142,12 +143,14 @@ class PyramidBRDF {
 			fflush(file);
 			exitSum += exitProb[i];
 		}
+		if(! (exitSum > 0 && exitSum <= 1)){
+			FILE* fErr = fopen("error.txt", "a");
+			fprintf(fErr, "%.9g\n", exitSum);
+			fclose(fErr);
+		}
 		fprintf(file, "%f\n", exitSum);
 		fflush(file);
-		int closeRes = fclose(file);
-		if (closeRes != 0) {
-			fprintf(stderr, "fclose error\n");
-		}
+		fclose(file);
 #endif
 
 		// Build CDF & choose
@@ -183,6 +186,13 @@ class PyramidBRDF {
 
 	PBRT_CPU_GPU Float G1(Vector3f wo, Vector3f n) const {
 		return shadowing_lyanne(wo, n);
+		// Float angle = std::acos(CosTheta(wo));
+		// Float startAngle = pbrt::PiOver2 - angleRad;
+		// if (angle < startAngle)
+		// 	return 1.0;
+		// Float linear = 1.0 - (angle - startAngle) * (pbrt::PiOver2 /
+		// (pbrt::PiOver2 - startAngle)); return linear; return
+		// math::cos(angle);
 		// TODO: own G1
 	}
 
@@ -200,9 +210,9 @@ class PyramidBRDF {
 		Float rg = CosTheta(r);
 		if (rg <= 0.0)
 			return 0.0;
-		Float D = 1 / 4 * std::cos(angleRad);
-		Float rfe = r.z * normals[0].z;	 // or simple * cos(alphaRad)
-		Float rfo = std::cos(angleRad) * CosTheta(r);
+		Float D = 1.0 / (4.0 * std::cos(angleRad));
+		Float rfe = (r.z * normals[0].z) + (r.x * normals[0].x);
+		Float rfo = r.z * normals[0].z;
 
 		Float numerator = rg;
 		Float denominator = D * (rfe + 2 * rfo);
