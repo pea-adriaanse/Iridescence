@@ -1,21 +1,20 @@
-LookAt 0 700 0  # eye
+LookAt 50 7 -50  # eye
        0 0 0  # look at point
-       0 0 1   # up vector
+       0 1 0   # up vector
 Camera "perspective" "float fov" 90
 
-Sampler "halton" "integer pixelsamples" 32
+Sampler "halton" "integer pixelsamples" 16
 Integrator "path"
 Film "rgb" "string filename" "cornell2.png"
      "integer xresolution" [400] "integer yresolution" [400]
 
 WorldBegin
-Scale 10 10 10
 
 MakeNamedMaterial "CustomMat"
-    #"string type" [ "pyramid" ]
-      #"float peakHeight" 1.0
-      #"float angle" 54.7
-      #"integer reflectCount" 3
+  #"string type" [ "pyramid" ]
+    #"float peakHeight" 1.0
+    #"float angle" 54.7
+    #"integer reflectCount" 3
   "string type" [ "specular" ]
     "float reflectance" 1.0
 
@@ -24,7 +23,7 @@ Texture "checks" "spectrum" "checkerboard"
 		"rgb tex1" [.1 .1 .1] "rgb tex2" [.8 .8 .8]
 
 AttributeBegin
-  AreaLightSource "diffuse" "rgb L" [1 1 1] "float power" 500000
+  AreaLightSource "diffuse" "rgb L" [1 1 1] "float scale" 3
   Shape "bilinearmesh" "point3 P" [-10 100 -10  10 100 -10  -10 100 10  10 100 10]
 AttributeEnd
 
@@ -46,6 +45,7 @@ AttributeBegin
 
   Identity
   Rotate -90 1 0 0
+  Scale 0.1 0.1 0.1
   #Material "diffuse" "rgb reflectance" [ 1.0 1.0 1.0] # White
   NamedMaterial "CustomMat"
   #Shape "bilinearmesh" "point3 P" [-50 0 50  50 0 50  -50 0 -50  50 0 -50] # Bottom

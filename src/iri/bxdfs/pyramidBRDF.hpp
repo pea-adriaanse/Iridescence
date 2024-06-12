@@ -174,7 +174,7 @@ class PyramidBRDF {
 
 		Vector3f wi = outDir[choice];
 		Float pdf = exitProb[choice];
-		Float brdf = 1 / AbsCosTheta(wo);
+		Float brdf = pdf / AbsCosTheta(wi);
 
 		// Float cosTheta = Dot(wo, normal);
 
