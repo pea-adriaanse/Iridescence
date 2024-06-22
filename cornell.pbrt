@@ -1,10 +1,10 @@
-LookAt 50 7 -50  # eye
+LookAt 0 70 0  # eye
        0 0 0  # look at point
-       0 1 0   # up vector
+       0 0 1   # up vector
 Camera "perspective" "float fov" 90
 
-Sampler "halton" "integer pixelsamples" 16
-Integrator "path"
+Sampler "halton" "integer pixelsamples" 4
+Integrator "path" "integer maxdepth" 5
 Film "rgb" "string filename" "cornell.png"
      "integer xresolution" [400] "integer yresolution" [400]
 
@@ -15,6 +15,7 @@ MakeNamedMaterial "CustomMat"
     "float peakHeight" 1.0
     "float angle" 54.7
     "integer reflectCount" 3
+    "bool shadowPaul" true
   #"string type" [ "specular" ]
     #"float reflectance" 1.0
 

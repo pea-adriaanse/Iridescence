@@ -16,7 +16,7 @@ class PyramidTest : public testing::Test {
 	Vector3f normals[4];
 
 	PyramidTest() {
-		this->brdf = PyramidBRDF(1.0, 54.7, 1.0);
+		this->brdf = PyramidBRDF(1.0, 54.7, 1.0, false);
 		this->angleRad = Radians(54.7);
 
 		// Recalculate normals (private inside brdf)
@@ -37,6 +37,14 @@ TEST_F(PyramidTest, pow4Test) {
 	EXPECT_EQ(4, PyramidBRDF::pow4(1));
 	EXPECT_EQ(16, PyramidBRDF::pow4(2));
 	EXPECT_EQ(64, PyramidBRDF::pow4(3));
+}
+
+TEST_F(PyramidTest, pow4sumTest) {
+	EXPECT_EQ(0, PyramidBRDF::pow4sum(0));
+	EXPECT_EQ(4, PyramidBRDF::pow4sum(1));
+	EXPECT_EQ(20, PyramidBRDF::pow4sum(2));
+	EXPECT_EQ(84, PyramidBRDF::pow4sum(3));
+	EXPECT_EQ(340, PyramidBRDF::pow4sum(4));
 }
 
 TEST_F(PyramidTest, G1) {

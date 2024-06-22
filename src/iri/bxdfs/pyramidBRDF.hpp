@@ -15,17 +15,20 @@ class PyramidBRDF {
 	Float angleRad;
 	// Float reflectance;
 	int reflectCount;
+	bool shadowPaul;
 	Vector3f normals[4];
 
   public:
-	static constexpr int maxLevels = 3;
+	static constexpr int maxLevels = 5;
 	PyramidBRDF() = default;
 	PBRT_CPU_GPU
-	PyramidBRDF(Float peakHeight, Float angle, int reflectCount)
+	PyramidBRDF(Float peakHeight, Float angle, int reflectCount,
+				bool shadowPaul)
 		: peakHeight(peakHeight),
 		  angle(angle),
 		  angleRad(Radians(angle)),
-		  reflectCount(reflectCount) {
+		  reflectCount(reflectCount),
+		  shadowPaul(shadowPaul) {
 		// Determine normals
 		Float normalZ = std::cos(angleRad);
 		Float normalXY = std::sin(angleRad);
@@ -143,7 +146,7 @@ class PyramidBRDF {
 			fflush(file);
 			exitSum += exitProb[i];
 		}
-		if(! (exitSum > 0 && exitSum <= 1)){
+		if (!(exitSum > 0 && exitSum <= 1)) {
 			FILE* fErr = fopen("error.txt", "a");
 			fprintf(fErr, "%.9g\n", exitSum);
 			fclose(fErr);
@@ -168,9 +171,12 @@ class PyramidBRDF {
 			}
 		}
 
-		if (trapped)	// light trapped
-			return {};	// TODO: should this return valid light value of
-						// intensity 0?
+		if (trapped)  // light trapped
+			return BSDFSample(
+				SampledSpectrum(0), wo, 0,
+				BxDFFlags::SpecularReflection);	 // TODO: should this return
+												 // valid light value of
+												 // intensity 0?
 
 		Vector3f wi = outDir[choice];
 		Float pdf = exitProb[choice];
@@ -185,15 +191,24 @@ class PyramidBRDF {
 	}
 
 	PBRT_CPU_GPU Float G1(Vector3f wo, Vector3f n) const {
-		return shadowing_lyanne(wo, n);
-		// Float angle = std::acos(CosTheta(wo));
-		// Float startAngle = pbrt::PiOver2 - angleRad;
-		// if (angle < startAngle)
-		// 	return 1.0;
-		// Float linear = 1.0 - (angle - startAngle) * (pbrt::PiOver2 /
-		// (pbrt::PiOver2 - startAngle)); return linear; return
-		// math::cos(angle);
-		// TODO: own G1
+		Float shadowing;
+		if (shadowPaul)
+			shadowing = shadowing_paul(wo);
+		else
+			shadowing = shadowing_lyanne(wo, n);
+		return Clamp(shadowing, 0.0, 1.0);
+	}
+
+	PBRT_CPU_GPU Float shadowing_paul(Vector3f wo) const {
+		Float C_cam = 0;
+		for (int i = 0; i < 4; i++) {
+			Float C_i = Dot(wo, this->normals[i]);
+			if (C_i > 0)
+				C_cam += C_i;
+		}
+		if (C_cam == 0)
+			return 0.0;
+		return 4 * std::cos(angleRad) * CosTheta(wo) / C_cam;
 	}
 
 	PBRT_CPU_GPU static Vector3f zeroAzimuth(Vector3f w) {
@@ -217,9 +232,6 @@ class PyramidBRDF {
 		Float numerator = rg;
 		Float denominator = D * (rfe + 2 * rfo);
 		Float shadowing = numerator / denominator;
-
-		if (shadowing >= 1.0)
-			return 1.0;
 		return shadowing;
 	}
 

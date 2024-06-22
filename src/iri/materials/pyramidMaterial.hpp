@@ -11,6 +11,7 @@ class PyramidMaterial {
 	Float peakHeight;
 	Float angle;
 	int reflectCount;
+	bool shadowPaul;
 
   public:
 	using BxDF = PyramidBRDF;
@@ -23,11 +24,12 @@ class PyramidMaterial {
 								   Allocator alloc);
 
 	PyramidMaterial(Image *normalMap, Float peakHeight, Float angle,
-					int reflectCount)
+					int reflectCount, bool shadowPaul)
 		: normalMap(normalMap),
 		  peakHeight(peakHeight),
 		  angle(angle),
-		  reflectCount(reflectCount) {}
+		  reflectCount(reflectCount),
+		  shadowPaul(shadowPaul) {}
 
 	std::string ToString() const;
 
@@ -38,7 +40,7 @@ class PyramidMaterial {
 		// Float a = Clamp(texEval(angle, ctx), 0.0, 90.0);
 		// Float r = Clamp(texEval(reflectance, ctx), 0.0, 1.0);
 		// int reflectCount = texEval()
-		return PyramidBRDF(peakHeight, angle, reflectCount);
+		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul);
 	}
 
 	template <typename TextureEvaluator>

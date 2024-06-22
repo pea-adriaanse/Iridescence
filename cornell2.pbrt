@@ -1,14 +1,15 @@
-LookAt 50 7 -50  # eye
+LookAt 0 7000 0  # eye
        0 0 0  # look at point
-       0 1 0   # up vector
+       0 0 1   # up vector
 Camera "perspective" "float fov" 90
 
-Sampler "halton" "integer pixelsamples" 16
-Integrator "path"
+Sampler "halton" "integer pixelsamples" 48
+Integrator "path" "integer maxdepth" 5
 Film "rgb" "string filename" "cornell2.png"
      "integer xresolution" [400] "integer yresolution" [400]
 
 WorldBegin
+Scale 100 100 100
 
 MakeNamedMaterial "CustomMat"
   #"string type" [ "pyramid" ]
@@ -40,15 +41,225 @@ AttributeBegin
 
   #Material "diffuse" "rgb reflectance" [ 0.0 0.0 1.0] # Blue
   Material "diffuse" "texture reflectance" "checks"
-  #Shape "bilinearmesh" "point3 P" [10 15 -10  -10 15 -10  10 -5 -10  -10 -5 -10] # Near
   Shape "bilinearmesh" "point3 P" [50 100 -50  -50 100 -50  50 0 -50  -50 0 -50] # Near
-
-  Identity
-  Rotate -90 1 0 0
-  Scale 0.1 0.1 0.1
-  #Material "diffuse" "rgb reflectance" [ 1.0 1.0 1.0] # White
-  NamedMaterial "CustomMat"
-  #Shape "bilinearmesh" "point3 P" [-50 0 50  50 0 50  -50 0 -50  50 0 -50] # Bottom
-  Shape "plymesh"
-    "string filename" "land.ply"
 AttributeEnd
+
+Identity
+Rotate -90 1 0 0 # orientation
+ObjectBegin "pyramids"
+  NamedMaterial "CustomMat"
+  Shape "plymesh"
+    "string filename" "../tracing/1000um1000u.ply"
+ObjectEnd
+
+Identity
+
+Translate -4500 0 -4500 # Bottom Left
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate -9000 0 1000 # Next Row
+
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids"
+Translate 1000 0 0
+ObjectInstance "pyramids" # Last

@@ -1,4 +1,5 @@
 #include <stdio.h>
+
 #include <iri/materials/pyramidMaterial.hpp>
 
 namespace pbrt {
@@ -21,8 +22,10 @@ PyramidMaterial *PyramidMaterial::Create(
 				_reflectCountClamped);
 	}
 
+	bool _shadowPaul = parameters.GetOneBool("shadowPaul", false);
+
 	return alloc.new_object<PyramidMaterial>(normalMap, _peakHeight, _angle,
-											 _reflectCount);
+											 _reflectCount, _shadowPaul);
 }
 
 std::string PyramidMaterial::ToString() const { return "PyramidMaterial"; }
