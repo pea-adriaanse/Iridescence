@@ -4,12 +4,26 @@
 #include <pbrt/util/scattering.h>
 #include <pbrt/util/transform.h>
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 
 namespace pbrt {
+// 1, 4, 16, 64
+PBRT_CPU_GPU static constexpr unsigned int pow4(unsigned int exponent) {
+	return 1 << (2 * exponent);
+}
+
+// 0, 4, 20, 84
+PBRT_CPU_GPU static constexpr unsigned int pow4sum(unsigned int exponent) {
+	return (4 * (pow4(exponent) - 1)) / 3;	// Modified geometric series
+}
+
 class PyramidBRDF {
   private:
+	typedef unsigned int uint;
+
 	Float peakHeight;
 	Float angle;
 	Float angleRad;
@@ -19,7 +33,9 @@ class PyramidBRDF {
 	Vector3f normals[4];
 
   public:
-	static constexpr int maxLevels = 5;
+	static constexpr uint maxLevels = 5;
+	static constexpr uint maxOptionCount = pow4sum(maxLevels);
+
 	PyramidBRDF() = default;
 	PBRT_CPU_GPU
 	PyramidBRDF(Float peakHeight, Float angle, int reflectCount,
@@ -37,6 +53,9 @@ class PyramidBRDF {
 		this->normals[1] = Vector3f(0, normalXY, normalZ);
 		this->normals[2] = Vector3f(-normalXY, 0, normalZ);
 		this->normals[3] = Vector3f(0, -normalXY, normalZ);
+		// 0.816137612
+		// 0.00000000
+		// 0.577857614
 	}
 	// BxDF Interface:
 	// TODO: used by ??
@@ -55,12 +74,78 @@ class PyramidBRDF {
 		return SampledSpectrum(0.0f);
 	}
 
-	PBRT_CPU_GPU static constexpr int pow4(int exponent) {
-		return 1 << (2 * exponent);
-	}
+	template <uint N>
+	struct ReflectDistS {
+		std::array<Vector3f, N> outDirs;
+		std::array<Float, N> exitProbs;
+	};
+	typedef struct ReflectDistS<maxOptionCount> ReflectDist;
 
-	PBRT_CPU_GPU static constexpr int pow4sum(int exponent) {
-		return (4 * (pow4(exponent) - 1)) / 3;	// Modified geometric series
+	PBRT_CPU_GPU void calcReflectDist(ReflectDist* results,
+											 const Vector3f inDir) const {
+		uint parentLevelStart;
+		uint parentLevelSize;
+
+		for (uint level = 0; level < reflectCount; level++) {
+			const uint levelStart = pow4sum(level);
+			const uint levelSize = pow4(level + 1);
+			for (uint entryID = 0; entryID < levelSize; entryID += 4) {
+				const uint index = levelStart + entryID;
+				Vector3f childrenInDir;
+				Float childrenProb;
+
+				// Determine input parameters
+				if (level == 0) {
+					childrenInDir = inDir;
+					childrenProb = 1.0;
+				} else {
+					uint parentID = (entryID / 4) - 1;
+					uint parent = parentID + parentLevelStart;
+					childrenInDir = -results->outDirs[parent];
+					childrenProb = 1.0 - results->exitProbs[parent];
+				}
+
+				// Skip zero children
+				if (childrenProb == 0) {
+				ZeroChildren:
+					for (unsigned face = 0; face < 4; face++) {
+						results->outDirs[index + face] = Vector3f(0, 0, 0);
+						results->exitProbs[index + face] = 0;
+					}
+					continue;
+				}
+
+				// Relative face probabilities
+				Float relativeProbs[4];
+				Float cosSum = 0;
+				for (uint face = 0; face < 4; face++) {
+					Float cos = std::max(Float(0), Dot(normals[face], inDir));
+					relativeProbs[face] =
+						cos;  // * shadowing (symmetric -> normalized away)
+					cosSum += cos;
+				}
+
+				// Normalize
+				if (cosSum > 0)
+					for (unsigned face = 0; face < 4; face++) {
+						relativeProbs[face] /= cosSum;
+					}
+				else
+					goto ZeroChildren;
+
+				// Results
+				for (uint face = 0; face < 4; face++) {
+					Vector3f outDir = Reflect(inDir, normals[face]);
+					results->outDirs[index + face] = outDir;
+					Float shadowing = G1(outDir, normals[face]);
+					results->exitProbs[index + face] =
+						childrenProb * relativeProbs[face] * shadowing;
+				}
+			}
+			parentLevelSize = levelSize;
+			parentLevelStart = levelStart;
+		}
+		return;
 	}
 
 	PBRT_CPU_GPU void determineProbs(Vector3f inDir, Float prevProb,
@@ -126,13 +211,16 @@ class PyramidBRDF {
 		Vector3f wo, Float uc, Point2f u,
 		TransportMode mode = TransportMode::Radiance,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
-		// Determine probabilities
-		constexpr int maxOptionCount = pow4sum(maxLevels);
-		Float exitProb[maxOptionCount];
-		Vector3f outDir[maxOptionCount];
+		// // Determine probabilities
+		// constexpr int maxOptionCount = pow4sum(maxLevels);
+		// Float exitProb[maxOptionCount];
+		// Vector3f outDir[maxOptionCount];
+
+		ReflectDist reflectDist;
+		calcReflectDist(&reflectDist, wo);
 
 		int optionCount = pow4sum(reflectCount);
-		determineProbs(wo, Float(1.0), 0, exitProb, outDir, 1, reflectCount);
+		// determineProbs(wo, Float(1.0), 0, exitProb, outDir, 1, reflectCount);
 
 #ifdef PBRT_DEBUG_BUILD
 		FILE* file = fopen("debug.txt", "w");
@@ -162,7 +250,7 @@ class PyramidBRDF {
 		bool trapped = true;  // sampled not to escape
 		Float prob = 0.0;
 		for (int i = 0; i < optionCount; i++) {
-			prob += exitProb[i];
+			prob += reflectDist.exitProbs[i];
 			// cumulativeProb[i] = prob;
 			if (uc < prob) {
 				choice = i;
@@ -178,8 +266,8 @@ class PyramidBRDF {
 												 // valid light value of
 												 // intensity 0?
 
-		Vector3f wi = outDir[choice];
-		Float pdf = exitProb[choice];
+		Vector3f wi = reflectDist.outDirs[choice];
+		Float pdf = reflectDist.exitProbs[choice];
 		Float brdf = pdf / AbsCosTheta(wi);
 
 		// Float cosTheta = Dot(wo, normal);

@@ -33,18 +33,18 @@ class PyramidTest : public testing::Test {
 };
 
 TEST_F(PyramidTest, pow4Test) {
-	EXPECT_EQ(1, PyramidBRDF::pow4(0));
-	EXPECT_EQ(4, PyramidBRDF::pow4(1));
-	EXPECT_EQ(16, PyramidBRDF::pow4(2));
-	EXPECT_EQ(64, PyramidBRDF::pow4(3));
+	EXPECT_EQ(1, pow4(0));
+	EXPECT_EQ(4, pow4(1));
+	EXPECT_EQ(16, pow4(2));
+	EXPECT_EQ(64, pow4(3));
 }
 
 TEST_F(PyramidTest, pow4sumTest) {
-	EXPECT_EQ(0, PyramidBRDF::pow4sum(0));
-	EXPECT_EQ(4, PyramidBRDF::pow4sum(1));
-	EXPECT_EQ(20, PyramidBRDF::pow4sum(2));
-	EXPECT_EQ(84, PyramidBRDF::pow4sum(3));
-	EXPECT_EQ(340, PyramidBRDF::pow4sum(4));
+	EXPECT_EQ(0, pow4sum(0));
+	EXPECT_EQ(4, pow4sum(1));
+	EXPECT_EQ(20, pow4sum(2));
+	EXPECT_EQ(84, pow4sum(3));
+	EXPECT_EQ(340, pow4sum(4));
 }
 
 TEST_F(PyramidTest, G1) {
@@ -54,7 +54,7 @@ TEST_F(PyramidTest, G1) {
 }
 
 TEST_F(PyramidTest, GenProbability1) {
-	constexpr int optionCount = PyramidBRDF::pow4(1);
+	constexpr int optionCount = pow4(1);
 	ASSERT_EQ(optionCount, 4);
 
 	// Float relativeProb[4 * 4 * 4];

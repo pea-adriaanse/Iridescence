@@ -96,6 +96,10 @@ Reformatting options:
                                 standard output and convert all triangle meshes to
                                 PLY files. Does not render an image.
   --upgrade                     Upgrade a pbrt-v3 file to pbrt-v4's format.
+
+Custom options:
+  --customLogFile <filename>    Log data to custom file.
+                                Logs single-pixel single-thread PathIntegrator data.
 )",
             NSpectrumSamples);
     exit(msg.empty() ? 0 : 1);
@@ -161,6 +165,7 @@ int main(int argc, char *argv[]) {
             ParseArg(&iter, args.end(), "gpu", &options.useGPU, onError) ||
             ParseArg(&iter, args.end(), "gpu-device", &options.gpuDevice, onError) ||
 #endif
+            ParseArg(&iter, args.end(), "customLogFile", &options.customLogFile, onError) ||
             ParseArg(&iter, args.end(), "debugstart", &options.debugStart, onError) ||
             ParseArg(&iter, args.end(), "disable-image-textures",
                      &options.disableImageTextures, onError) ||

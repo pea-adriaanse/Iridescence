@@ -12,6 +12,7 @@
 #include <pbrt/util/memory.h>
 #include <pbrt/util/pstd.h>
 #include <pbrt/util/vecmath.h>
+#include <cstdio>
 
 namespace pbrt {
 
@@ -62,6 +63,10 @@ class BSDF {
         if (wo.z == 0 || !(bxdf.Flags() & sampleFlags))
             return {};
         // Sample _bxdf_ and return _BSDFSample_
+        // #ifdef _DEBUG
+        // volatile Vector3f n = shadingFrame.z;
+        // printf("normal: %.9f %.9f %.9f\n", n.x, n.y, n.z);
+        // #endif
         pstd::optional<BSDFSample> bs = bxdf.Sample_f(wo, u, u2, mode, sampleFlags);
         if (bs)
             DCHECK_GE(bs->pdf, 0);
@@ -145,7 +150,7 @@ class BSDF {
     PBRT_CPU_GPU
     void Regularize() { bxdf.Regularize(); }
 
-  private:
+  public:
     // BSDF Private Members
     BxDF bxdf;
     Frame shadingFrame;

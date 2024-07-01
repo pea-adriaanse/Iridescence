@@ -8,6 +8,7 @@ namespace pbrt {
 class SpecularMaterial {
   private:
 	Float reflectance;
+	int reflectCount;
 
   public:
 	using BxDF = SpecularBRDF;
@@ -19,15 +20,15 @@ class SpecularMaterial {
 		const TextureParameterDictionary &parameters, Image *normalMap,
 		const FileLoc *loc, Allocator alloc);
 
-	SpecularMaterial(Image *normalMap, Float reflectance)
-		: normalMap(normalMap), reflectance(reflectance) {}
+	SpecularMaterial(Image *normalMap, Float reflectance, int reflectCount)
+		: normalMap(normalMap), reflectance(reflectance), reflectCount(reflectCount) {}
 
 	std::string ToString() const;
 
 	template <typename TextureEvaluator>
 	PBRT_CPU_GPU BxDF GetBxDF(TextureEvaluator texEval, MaterialEvalContext ctx,
 							  SampledWavelengths &lambda) const {
-		return SpecularBRDF(reflectance);
+		return SpecularBRDF(reflectance, reflectCount);
 	}
 
 	template <typename TextureEvaluator>

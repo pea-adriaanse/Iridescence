@@ -5,20 +5,20 @@ Camera "perspective" "float fov" 90
 
 Sampler "halton" "integer pixelsamples" 64
 Integrator "path" "integer maxdepth" 5
-Film "rgb" "string filename" "cornell.png"
+Film "rgb" "string filename" "cornell_m.png"
      "integer xresolution" [400] "integer yresolution" [400]
 
 WorldBegin
 Scale 10 10 10
 
 MakeNamedMaterial "CustomMat"
-  "string type" [ "pyramid" ]
-    "float peakHeight" 1.0
-    "float angle" 10
+  #"string type" [ "pyramid" ]
+    #"float peakHeight" 1.0
+    #"float angle" 54.7
+    #"integer reflectCount" 3
+  "string type" [ "specular" ]
+    "float reflectance" 1.0
     "integer reflectCount" 1
-    "bool shadowPaul" false
-  #"string type" [ "specular" ]
-    #"float reflectance" 1.0
 
 Texture "checks" "spectrum" "checkerboard"
 		"float uscale" [16] "float vscale" [16]
@@ -42,14 +42,12 @@ AttributeBegin
 
   #Material "diffuse" "rgb reflectance" [ 0.0 0.0 1.0] # Blue
   Material "diffuse" "texture reflectance" "checks"
-  #Shape "bilinearmesh" "point3 P" [10 15 -10  -10 15 -10  10 -5 -10  -10 -5 -10] # Near
   Shape "bilinearmesh" "point3 P" [50 100 -50  -50 100 -50  50 0 -50  -50 0 -50] # Near
 
-  #Identity
-  #Rotate -90 1 0 0
-  #Material "diffuse" "rgb reflectance" [ 1.0 1.0 1.0] # White
+  Identity
+  Rotate -90 1 0 0 # orientation
   NamedMaterial "CustomMat"
-  Shape "bilinearmesh" "point3 P" [-50 0 50  50 0 50  -50 0 -50  50 0 -50] # Bottom
-  #Shape "plymesh"
-  #  "string filename" "land.ply"
+  Shape "plymesh"
+    #"string filename" "../tracing/1000um1000u.ply"
+    "string filename" "../tracing/1000um1000u10deg.ply"
 AttributeEnd

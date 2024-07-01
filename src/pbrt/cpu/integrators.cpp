@@ -39,7 +39,9 @@
 #include <pbrt/util/spectrum.h>
 #include <pbrt/util/stats.h>
 #include <pbrt/util/string.h>
+#include <fstream>
 
+#include <cstdio>
 #include <algorithm>
 
 namespace pbrt {
@@ -632,9 +634,18 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
     SampledSpectrum L(0.f), beta(1.f);
     int depth = 0;
 
-    Float p_b, etaScale = 1;
+#ifdef PBRT_DEBUG_BUILD
+	FILE *file = fopen("debug.txt", "a");
+	fprintf(file, ">");
+	fflush(file);
+	fclose(file);
+#endif
+
+	Float p_b, etaScale = 1;
     bool specularBounce = false, anyNonSpecularBounces = false;
     LightSampleContext prevIntrCtx;
+
+    SpecularBRDF::resetChain();
 
     // Sample path from camera and accumulate radiance estimate
     while (true) {
@@ -659,6 +670,8 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
 
             break;
         }
+
+        bool hitLight = false;
         // Incorporate emission from surface hit by ray
         SampledSpectrum Le = si->intr.Le(-ray.d, lambda);
         if (Le) {
@@ -673,6 +686,7 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
 
                 L += beta * w_l * Le;
             }
+            hitLight = true;
         }
 
         SurfaceInteraction &isect = si->intr;
@@ -732,10 +746,25 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
         // Sample BSDF to get new path direction
         Vector3f wo = -ray.d;
         Float u = sampler.Get1D();
-        pstd::optional<BSDFSample> bs = bsdf.Sample_f(wo, u, sampler.Get2D());
+
+		if (SpecularBRDF::limitChainDepth()) {
+			std::string name = bsdf.bxdf.ToString();
+			bool mesh = (name == SpecularBRDF::Name());
+			if (!mesh)
+				SpecularBRDF::resetChain();
+			else {
+				SpecularBRDF::incrementChain();
+				if (SpecularBRDF::maxChainDepth())
+					break;
+			}
+		}
+
+		pstd::optional<BSDFSample> bs = bsdf.Sample_f(wo, u, sampler.Get2D());
         if (!bs)
             break;
-        // Update path state variables after surface scattering
+
+
+		// Update path state variables after surface scattering
         beta *= bs->f * AbsDot(bs->wi, isect.shading.n) / bs->pdf;
         p_b = bs->pdfIsProportional ? bsdf.PDF(wo, bs->wi) : bs->pdf;
         DCHECK(!IsInf(beta.y(lambda)));
@@ -747,6 +776,12 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
 
         ray = isect.SpawnRay(ray, bsdf, bs->wi, bs->flags, bs->eta);
 
+		if (Options->logPixel()) {
+			std::ofstream &customLog = *Options->customLogStream;
+			customLog << "(" << bsdf.bxdf.ToString() << ", light=" << hitLight <<  ", depth: " << depth
+					  << ") wi: " << bs->wi << " f: " << beta << ", pdf: " << bs->pdf << std::endl;
+		}
+
         // Possibly terminate the path with Russian roulette
         SampledSpectrum rrBeta = beta * etaScale;
         if (rrBeta.MaxComponentValue() < 1 && depth > 1) {
@@ -757,6 +792,11 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
             DCHECK(!IsInf(beta.y(lambda)));
         }
     }
+    if (Options->logPixel()) {
+        std::ofstream &customLog = *Options->customLogStream;
+        customLog << "Contribution: " << L << std::endl << std::endl;
+    }
+
     pathLength << depth;
     return L;
 }

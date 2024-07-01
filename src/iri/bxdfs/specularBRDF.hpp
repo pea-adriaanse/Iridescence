@@ -10,12 +10,16 @@ namespace pbrt {
 class SpecularBRDF {
   private:
 	Float reflectance;
+	int reflectCount;
+	static constexpr int maxLevels = 3;
 
   public:
-	static constexpr int maxLevels = 3;
 	SpecularBRDF() = default;
 	PBRT_CPU_GPU
-	SpecularBRDF(Float reflectance) : reflectance(reflectance) {}
+	SpecularBRDF(Float reflectance, int reflectCount)
+		: reflectance(reflectance), reflectCount(reflectCount) {
+		SpecularBRDF::max_chain_depth = reflectCount;
+	}
 	// BxDF Interface:
 	// TODO: used by ??
 	PBRT_CPU_GPU BxDFFlags Flags() const {
@@ -33,6 +37,15 @@ class SpecularBRDF {
 		return SampledSpectrum(0.0f);
 	}
 
+	static int max_chain_depth;
+	static int chained_depth;
+	static void resetChain() { SpecularBRDF::chained_depth = 0; }
+	static void incrementChain() { SpecularBRDF::chained_depth += 1; }
+	static bool maxChainDepth() {
+		return SpecularBRDF::chained_depth > SpecularBRDF::max_chain_depth;
+	}
+	static bool limitChainDepth() { return SpecularBRDF::max_chain_depth > 0; }
+
 	/// @brief Samples the BRDF
 	/// @param wo locac out direction
 	/// @param uc, u uniformly sampled random values
@@ -46,10 +59,22 @@ class SpecularBRDF {
 		if (!(sampleFlags & BxDFReflTransFlags::Reflection))
 			return {};
 
+		// -0.816142797
+		// 0.577850342
+		// 0.00000000
+
 		// Determine probabilities
 		Vector3f wi = Reflect(wo, Vector3f(0, 0, 1));
 		Float pdf = reflectance;
-		Float brdf = 1 / AbsCosTheta(wo);
+		Float brdf = 1 / AbsCosTheta(wi);
+
+#ifdef PBRT_DEBUG_BUILD
+		FILE* file = fopen("debug.txt", "a");
+		fprintf(file, "%.9f, %.9f, %.9f -> %.9f, %.9f, %.9f\n", wo[0], wo[1],
+				wo[2], wi[0], wi[1], wi[2]);
+		fflush(file);
+		fclose(file);
+#endif
 
 		return BSDFSample(SampledSpectrum(brdf), wi, pdf,
 						  BxDFFlags::SpecularReflection);

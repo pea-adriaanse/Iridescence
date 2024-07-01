@@ -9,6 +9,7 @@
 #include <pbrt/util/log.h>
 #include <pbrt/util/pstd.h>
 #include <pbrt/util/vecmath.h>
+#include <fstream>
 
 #include <string>
 
@@ -55,7 +56,19 @@ struct PBRTOptions : BasicPBRTOptions {
     pstd::optional<Point2i> pixelMaterial;
     Float displacementEdgeScale = 1;
 
+    // Iridescence
+    std::string customLogFile;
+    std::shared_ptr<std::ofstream> customLogStream;
+
     std::string ToString() const;
+
+	bool logPixel() {
+        bool useCustom = customLogStream && customLogStream->is_open();
+		bool singlePixel =
+			pixelBounds.has_value() && pixelBounds.value().Area() == 1;
+        bool singleThread = nThreads == 1;
+		return useCustom && singlePixel && singleThread;
+	}
 };
 
 // Options Global Variable Declaration
