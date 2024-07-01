@@ -77,12 +77,13 @@ class PyramidBRDF {
 	template <uint N>
 	struct ReflectDistS {
 		std::array<Vector3f, N> outDirs;
+		std::array<Float, N> nexitProbs;
 		std::array<Float, N> exitProbs;
 	};
 	typedef struct ReflectDistS<maxOptionCount> ReflectDist;
 
 	PBRT_CPU_GPU void calcReflectDist(ReflectDist* results,
-											 const Vector3f inDir) const {
+									  const Vector3f inDir) const {
 		uint parentLevelStart;
 		uint parentLevelSize;
 
@@ -102,7 +103,7 @@ class PyramidBRDF {
 					uint parentID = (entryID / 4) - 1;
 					uint parent = parentID + parentLevelStart;
 					childrenInDir = -results->outDirs[parent];
-					childrenProb = 1.0 - results->exitProbs[parent];
+					childrenProb = results->nexitProbs[parent];
 				}
 
 				// Skip zero children
@@ -111,6 +112,7 @@ class PyramidBRDF {
 					for (unsigned face = 0; face < 4; face++) {
 						results->outDirs[index + face] = Vector3f(0, 0, 0);
 						results->exitProbs[index + face] = 0;
+						results->nexitProbs[index + face] = 0;
 					}
 					continue;
 				}
@@ -137,9 +139,13 @@ class PyramidBRDF {
 				for (uint face = 0; face < 4; face++) {
 					Vector3f outDir = Reflect(inDir, normals[face]);
 					results->outDirs[index + face] = outDir;
+
+					Float prob = childrenProb * relativeProbs[face];
 					Float shadowing = G1(outDir, normals[face]);
-					results->exitProbs[index + face] =
-						childrenProb * relativeProbs[face] * shadowing;
+					Float exitProb = prob * shadowing;
+					Float nexitProb = prob - exitProb;
+					results->exitProbs[index + face] = exitProb;
+					results->nexitProbs[index + face] = nexitProb;
 				}
 			}
 			parentLevelSize = levelSize;
