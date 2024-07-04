@@ -77,6 +77,7 @@ class PyramidBRDF {
 	template <uint N>
 	struct ReflectDistS {
 		std::array<Vector3f, N> outDirs;
+		std::array<Float, N> brdfs; // TODO: testing to debug (maybe remove again)
 		std::array<Float, N> nexitProbs;
 		std::array<Float, N> exitProbs;
 	};
@@ -94,16 +95,19 @@ class PyramidBRDF {
 				const uint index = levelStart + entryID;
 				Vector3f childrenInDir;
 				Float childrenProb;
+				Float childrenBrdf;
 
 				// Determine input parameters
 				if (level == 0) {
 					childrenInDir = inDir;
 					childrenProb = 1.0;
+					childrenBrdf = 1.0;
 				} else {
 					uint parentID = (entryID / 4) - 1;
 					uint parent = parentID + parentLevelStart;
 					childrenInDir = -results->outDirs[parent];
 					childrenProb = results->nexitProbs[parent];
+					childrenBrdf = results->brdfs[parent];
 				}
 
 				// Skip zero children
@@ -113,6 +117,7 @@ class PyramidBRDF {
 						results->outDirs[index + face] = Vector3f(0, 0, 0);
 						results->exitProbs[index + face] = 0;
 						results->nexitProbs[index + face] = 0;
+						results->brdfs[index + face] = 0;
 					}
 					continue;
 				}
@@ -146,6 +151,9 @@ class PyramidBRDF {
 					Float nexitProb = prob - exitProb;
 					results->exitProbs[index + face] = exitProb;
 					results->nexitProbs[index + face] = nexitProb;
+
+					Float brdf = childrenBrdf * shadowing;
+					results->brdfs[index + face] = brdf;
 				}
 			}
 			parentLevelSize = levelSize;
@@ -251,30 +259,29 @@ class PyramidBRDF {
 #endif
 
 		// Build CDF & choose
-		// Float cumulativeProb[4*4*4];
+		Float probSum = 0;
+		for (int i = 0; i < optionCount; i++)
+			probSum += (reflectDist.exitProbs[i]>0.001)? 1 : 0;
+		if (probSum == 0)
+			return {};
+
 		int choice;
-		bool trapped = true;  // sampled not to escape
-		Float prob = 0.0;
+		Float prob = 0;
 		for (int i = 0; i < optionCount; i++) {
-			prob += reflectDist.exitProbs[i];
-			// cumulativeProb[i] = prob;
+			Float exitProb = ((reflectDist.exitProbs[i] > 0.001)?1:0) / probSum;
+			prob += exitProb;
 			if (uc < prob) {
 				choice = i;
-				trapped = false;
 				break;
 			}
 		}
 
-		if (trapped)  // light trapped
-			return BSDFSample(
-				SampledSpectrum(0), wo, 0,
-				BxDFFlags::SpecularReflection);	 // TODO: should this return
-												 // valid light value of
-												 // intensity 0?
-
 		Vector3f wi = reflectDist.outDirs[choice];
-		Float pdf = reflectDist.exitProbs[choice];
-		Float brdf = pdf / AbsCosTheta(wi);
+		// Float pdf = reflectDist.exitProbs[choice] / probSum;
+		// = reflectDist.exitProbs[choice];
+		// Float brdf = reflectDist.exitProbs[choice] / AbsCosTheta(wi);
+		Float pdf = 1.0;
+		Float brdf = 1;//reflectDist.brdfs[choice];
 
 		// Float cosTheta = Dot(wo, normal);
 
