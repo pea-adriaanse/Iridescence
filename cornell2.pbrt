@@ -3,8 +3,8 @@ LookAt 0 7000 0  # eye
        0 0 1   # up vector
 Camera "perspective" "float fov" 90
 
-Sampler "halton" "integer pixelsamples" 48
-Integrator "path" "integer maxdepth" 5
+Sampler "halton" "integer pixelsamples" 64
+Integrator "path" "integer maxdepth" 5 "integer maxiridepth" 2
 Film "rgb" "string filename" "cornell2.png"
      "integer xresolution" [400] "integer yresolution" [400]
 

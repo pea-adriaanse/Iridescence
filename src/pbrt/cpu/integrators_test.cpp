@@ -290,7 +290,7 @@ std::vector<TestIntegrator> GetIntegrators() {
                 cbp, 45, Bounds2f(Point2f(-1, -1), Point2f(1, 1)), 0., 10.);
 
             const Film filmp = camera->GetFilm();
-            Integrator *integrator = new PathIntegrator(8, camera, sampler.first,
+            Integrator *integrator = new PathIntegrator(8, 8, camera, sampler.first,
                                                         scene.aggregate, scene.lights);
             integrators.push_back({integrator, filmp,
                                    "Path, depth 8, Perspective, " + sampler.second +
@@ -310,7 +310,7 @@ std::vector<TestIntegrator> GetIntegrators() {
                 cbp, Bounds2f(Point2f(-.1, -.1), Point2f(.1, .1)), 0., 10.);
             const Film filmp = camera->GetFilm();
 
-            Integrator *integrator = new PathIntegrator(8, camera, sampler.first,
+            Integrator *integrator = new PathIntegrator(8, 8, camera, sampler.first,
                                                         scene.aggregate, scene.lights);
             integrators.push_back(
                 {integrator, filmp,

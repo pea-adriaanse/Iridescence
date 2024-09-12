@@ -1,8 +1,8 @@
 # pbrt-v4 top-level CMakeLists.txt
 
-cmake_minimum_required (VERSION 3.28)
+cmake_minimum_required (VERSION 3.12)
 
-project (PBRT-V4 LANGUAGES CXX C)
+project (PBRT-V4 LANGUAGES CXX C CUDA)
 
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -166,7 +166,7 @@ if(PBRT_USE_GPU)
   was found. GPU support is therefore disabled. If you have multiple versions\
   of CUDA installed, please update your PATH.")
     else ()
-      find_package (CUDAToolkit REQUIRED)
+      find_package (CUDA REQUIRED)
 
       # This seems to be necessary starting with 3.17.1, but gives an error
       # about 17 being an unsupported version earlier...
@@ -299,7 +299,6 @@ if(PBRT_USE_GPU)
           macro (cuda_compile_and_embed output_var cuda_file lib_name)
             add_library ("${lib_name}" OBJECT "${cuda_file}")
             set_property (TARGET "${lib_name}" PROPERTY CUDA_PTX_COMPILATION ON)
-            set_target_properties("${lib_name}" PROPERTIES CUDA_ARCHITECTURES "native")
 
             # disable "extern declaration... is treated as a static definition" warning
             if (CUDA_VERSION_MAJOR EQUAL 11 AND CUDA_VERSION_MINOR LESS 2)

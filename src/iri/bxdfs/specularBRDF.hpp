@@ -10,15 +10,12 @@ namespace pbrt {
 class SpecularBRDF {
   private:
 	Float reflectance;
-	int reflectCount;
-	static constexpr int maxLevels = 3;
 
   public:
 	SpecularBRDF() = default;
 	PBRT_CPU_GPU
 	SpecularBRDF(Float reflectance, int reflectCount)
-		: reflectance(reflectance), reflectCount(reflectCount) {
-		SpecularBRDF::max_chain_depth = reflectCount;
+		: reflectance(reflectance) {
 	}
 	// BxDF Interface:
 	// TODO: used by ??
@@ -36,15 +33,6 @@ class SpecularBRDF {
 								   TransportMode mode) const {
 		return SampledSpectrum(0.0f);
 	}
-
-	static int max_chain_depth;
-	static int chained_depth;
-	static void resetChain() { SpecularBRDF::chained_depth = 0; }
-	static void incrementChain() { SpecularBRDF::chained_depth += 1; }
-	static bool maxChainDepth() {
-		return SpecularBRDF::chained_depth > SpecularBRDF::max_chain_depth;
-	}
-	static bool limitChainDepth() { return SpecularBRDF::max_chain_depth > 0; }
 
 	/// @brief Samples the BRDF
 	/// @param wo locac out direction

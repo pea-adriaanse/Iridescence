@@ -207,7 +207,7 @@ class SimplePathIntegrator : public RayIntegrator {
 class PathIntegrator : public RayIntegrator {
   public:
     // PathIntegrator Public Methods
-    PathIntegrator(int maxDepth, Camera camera, Sampler sampler, Primitive aggregate,
+    PathIntegrator(int maxDepth, int maxIriDepth, Camera camera, Sampler sampler, Primitive aggregate,
                    std::vector<Light> lights,
                    const std::string &lightSampleStrategy = "bvh",
                    bool regularize = false);
@@ -230,7 +230,7 @@ class PathIntegrator : public RayIntegrator {
                              SampledWavelengths &lambda, Sampler sampler) const;
 
     // PathIntegrator Private Members
-    int maxDepth;
+    int maxDepth, maxIriDepth;
     LightSampler lightSampler;
     bool regularize;
 };

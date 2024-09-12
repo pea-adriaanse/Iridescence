@@ -619,11 +619,11 @@ STAT_PERCENT("Integrator/Regularized BSDFs", regularizedBSDFs, totalBSDFs);
 STAT_INT_DISTRIBUTION("Integrator/Path length", pathLength);
 
 // PathIntegrator Method Definitions
-PathIntegrator::PathIntegrator(int maxDepth, Camera camera, Sampler sampler,
+PathIntegrator::PathIntegrator(int maxDepth, int maxIriDepth, Camera camera, Sampler sampler,
                                Primitive aggregate, std::vector<Light> lights,
                                const std::string &lightSampleStrategy, bool regularize)
     : RayIntegrator(camera, sampler, aggregate, lights),
-      maxDepth(maxDepth),
+      maxDepth(maxDepth), maxIriDepth(maxIriDepth),
       lightSampler(LightSampler::Create(lightSampleStrategy, lights, Allocator())),
       regularize(regularize) {}
 
@@ -633,6 +633,7 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
     // Declare local variables for _PathIntegrator::Li()_
     SampledSpectrum L(0.f), beta(1.f);
     int depth = 0;
+    int iriDepth = 0;
 
 #ifdef PBRT_DEBUG_BUILD
 	FILE *file = fopen("debug.txt", "a");
@@ -644,8 +645,6 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
 	Float p_b, etaScale = 1;
     bool specularBounce = false, anyNonSpecularBounces = false;
     LightSampleContext prevIntrCtx;
-
-    SpecularBRDF::resetChain();
 
     // Sample path from camera and accumulate radiance estimate
     while (true) {
@@ -747,14 +746,14 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
         Vector3f wo = -ray.d;
         Float u = sampler.Get1D();
 
-		if (SpecularBRDF::limitChainDepth()) {
+		if (maxIriDepth < maxDepth) {
 			std::string name = bsdf.bxdf.ToString();
 			bool mesh = (name == SpecularBRDF::Name());
 			if (!mesh)
-				SpecularBRDF::resetChain();
+				iriDepth = 0;
 			else {
-				SpecularBRDF::incrementChain();
-				if (SpecularBRDF::maxChainDepth())
+				iriDepth += 1;
+				if (iriDepth > maxIriDepth)
 					break;
 			}
 		}
@@ -845,17 +844,18 @@ SampledSpectrum PathIntegrator::SampleLd(const SurfaceInteraction &intr, const B
 }
 
 std::string PathIntegrator::ToString() const {
-    return StringPrintf("[ PathIntegrator maxDepth: %d lightSampler: %s regularize: %s ]",
-                        maxDepth, lightSampler, regularize);
+    return StringPrintf("[ PathIntegrator maxDepth: %d maxIriDepth: %d lightSampler: %s regularize: %s ]",
+                        maxDepth, maxIriDepth, lightSampler, regularize);
 }
 
 std::unique_ptr<PathIntegrator> PathIntegrator::Create(
     const ParameterDictionary &parameters, Camera camera, Sampler sampler,
     Primitive aggregate, std::vector<Light> lights, const FileLoc *loc) {
     int maxDepth = parameters.GetOneInt("maxdepth", 5);
+    int maxIriDepth = parameters.GetOneInt("maxiridepth", maxDepth);
     std::string lightStrategy = parameters.GetOneString("lightsampler", "bvh");
     bool regularize = parameters.GetOneBool("regularize", false);
-    return std::make_unique<PathIntegrator>(maxDepth, camera, sampler, aggregate, lights,
+    return std::make_unique<PathIntegrator>(maxDepth, maxIriDepth, camera, sampler, aggregate, lights,
                                             lightStrategy, regularize);
 }
 

@@ -31,7 +31,7 @@ class PyramidBRDF {
 	int reflectCount;
 	bool shadowPaul;
 	Vector3f normals[4];
-
+ 
   public:
 	static constexpr uint maxLevels = 5;
 	static constexpr uint maxOptionCount = pow4sum(maxLevels);
@@ -103,8 +103,9 @@ class PyramidBRDF {
 					childrenProb = 1.0;
 					childrenBrdf = 1.0;
 				} else {
-					uint parentID = (entryID / 4) - 1;
-					uint parent = parentID + parentLevelStart;
+					// TODO: Double check next two lines
+					uint parentIndex = (index / 4) - 1;
+					uint parent = parentIndex - parentLevelStart;
 					childrenInDir = -results->outDirs[parent];
 					childrenProb = results->nexitProbs[parent];
 					childrenBrdf = results->brdfs[parent];
@@ -237,25 +238,25 @@ class PyramidBRDF {
 		// determineProbs(wo, Float(1.0), 0, exitProb, outDir, 1, reflectCount);
 
 #ifdef PBRT_DEBUG_BUILD
-		FILE* file = fopen("debug.txt", "w");
-		fprintf(file, "%f, %f, %f\n", wo[0], wo[1], wo[2]);
-		fprintf(file, "%f, %f, %f\n", normals[0][0], normals[0][1],
-				normals[0][2]);
-		Float exitSum = 0;
-		for (int i = 0; i < optionCount; i++) {
-			fprintf(file, "%f, %f, %f, %f\n", outDir[i][0], outDir[i][1],
-					outDir[i][2], exitProb[i]);
-			fflush(file);
-			exitSum += exitProb[i];
-		}
-		if (!(exitSum > 0 && exitSum <= 1)) {
-			FILE* fErr = fopen("error.txt", "a");
-			fprintf(fErr, "%.9g\n", exitSum);
-			fclose(fErr);
-		}
-		fprintf(file, "%f\n", exitSum);
-		fflush(file);
-		fclose(file);
+		// FILE* file = fopen("debug.txt", "w");
+		// fprintf(file, "%f, %f, %f\n", wo[0], wo[1], wo[2]);
+		// fprintf(file, "%f, %f, %f\n", normals[0][0], normals[0][1],
+		// 		normals[0][2]);
+		// Float exitSum = 0;
+		// for (int i = 0; i < optionCount; i++) {
+		// 	fprintf(file, "%f, %f, %f, %f\n", outDir[i][0], outDir[i][1],
+		// 			outDir[i][2], exitProb[i]);
+		// 	fflush(file);
+		// 	exitSum += exitProb[i];
+		// }
+		// if (!(exitSum > 0 && exitSum <= 1)) {
+		// 	FILE* fErr = fopen("error.txt", "a");
+		// 	fprintf(fErr, "%.9g\n", exitSum);
+		// 	fclose(fErr);
+		// }
+		// fprintf(file, "%f\n", exitSum);
+		// fflush(file);
+		// fclose(file);
 #endif
 
 		// Build CDF & choose
