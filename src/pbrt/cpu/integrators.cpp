@@ -636,10 +636,10 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
     int iriDepth = 0;
 
 #ifdef PBRT_DEBUG_BUILD
-	FILE *file = fopen("debug.txt", "a");
-	fprintf(file, ">");
-	fflush(file);
-	fclose(file);
+	// FILE *file = fopen("debug.txt", "a");
+	// fprintf(file, ">");
+	// fflush(file);
+	// fclose(file);
 #endif
 
 	Float p_b, etaScale = 1;
@@ -752,6 +752,7 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
 			if (!mesh)
 				iriDepth = 0;
 			else {
+                printf("IriDepth reached");
 				iriDepth += 1;
 				if (iriDepth > maxIriDepth)
 					break;
