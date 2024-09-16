@@ -76,6 +76,12 @@ class Integrator {
     }
 };
 
+// Logged by PathIntegrator:
+extern bool g_pathsLogged;
+extern unsigned int g_logCount;
+extern std::vector<unsigned int> g_exitPathCount;
+extern std::map<std::string, unsigned int> g_invalidCount;
+
 // ImageTileIntegrator Definition
 class ImageTileIntegrator : public Integrator {
   public:
@@ -207,7 +213,7 @@ class SimplePathIntegrator : public RayIntegrator {
 class PathIntegrator : public RayIntegrator {
   public:
     // PathIntegrator Public Methods
-    PathIntegrator(int maxDepth, int maxIriDepth, Camera camera, Sampler sampler, Primitive aggregate,
+    PathIntegrator(int maxDepth, int maxIriDepth, bool savePathDist, Camera camera, Sampler sampler, Primitive aggregate,
                    std::vector<Light> lights,
                    const std::string &lightSampleStrategy = "bvh",
                    bool regularize = false);
@@ -230,6 +236,7 @@ class PathIntegrator : public RayIntegrator {
                              SampledWavelengths &lambda, Sampler sampler) const;
 
     // PathIntegrator Private Members
+    bool savePathDist;
     int maxDepth, maxIriDepth;
     LightSampler lightSampler;
     bool regularize;

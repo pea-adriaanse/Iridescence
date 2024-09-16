@@ -54,6 +54,18 @@ class BSDF {
         return specificBxDF->f(wo, wi, mode);
     }
 
+    // Return the face indexStr of a pyramid face represented with this bsdf
+    // Warning: Correct values require the mesh to not be rotated in the scene.
+    char faceIndexStr() {
+        Vector3f up = LocalToRender(Vector3f(0, 0, 1)); // orientation dependant!
+        bool WestEast = std::abs(up.x) > std::abs(up.z); // as there may be rounding errors around 0 component.
+        bool Positive = WestEast ? (up.x > 0) : (up.z > 0);
+        if (WestEast)
+            return Positive ? 'E' : 'W';
+        else
+            return Positive ? 'S' : 'N'; // Mesh is rotated
+    }
+
     PBRT_CPU_GPU
     pstd::optional<BSDFSample> Sample_f(
         Vector3f woRender, Float u, Point2f u2,

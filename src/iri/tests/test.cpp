@@ -16,7 +16,7 @@ class PyramidTest : public testing::Test {
 	Vector3f normals[4];
 
 	PyramidTest() {
-		this->brdf = PyramidBRDF(1.0, 54.7, 1.0, false);
+		this->brdf = PyramidBRDF(1.0, 54.7, 1.0, false, "none");
 		this->angleRad = Radians(54.7);
 
 		// Recalculate normals (private inside brdf)
@@ -76,7 +76,7 @@ TEST_F(PyramidTest, GenProbability1) {
 }
 
 TEST_F(PyramidTest, CalcReflectDist1){
-	// this->brdf = PyramidBRDF(1.0, 54.7, 1.0, false);
+	// this->brdf = PyramidBRDF(1.0, 54.7, 1.0, false, "none");
 	PyramidBRDF::ReflectDist dist;
 	Vector3f dir = Vector3f(0,0,1);
 	brdf.calcReflectDist(&dist, dir);
@@ -107,13 +107,12 @@ void expectNear(Vector3f actual, Vector3f expected, float delta) {
 }
 
 TEST_F(PyramidTest, CalcReflectDist2) {
-	this->brdf = PyramidBRDF(1.0, 45.0, 2, false);
+	this->brdf = PyramidBRDF(1.0, 45.0, 2, false, "none");
 	PyramidBRDF::ReflectDist dist;
 	Vector3f dir = Vector3f(0,0,1);
 	brdf.calcReflectDist(&dist, dir);
 
 	EXPECT_EQ(0.25f, dist.nexitProbs[0]);
-	printf("%s", normals[0].ToString());
 	expectNear(Vector3f(1.0,0,0), dist.outDirs[0], 1e-5);
 
 	unsigned int indexEW = brdf.reflectDistStringToIndex("EW");

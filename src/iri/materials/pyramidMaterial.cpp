@@ -23,9 +23,10 @@ PyramidMaterial *PyramidMaterial::Create(
 	}
 
 	bool _shadowPaul = parameters.GetOneBool("shadowPaul", false);
+	std::string _setting = parameters.GetOneString("setting", "none");
 
 	return alloc.new_object<PyramidMaterial>(normalMap, _peakHeight, _angle,
-											 _reflectCount, _shadowPaul);
+											 _reflectCount, _shadowPaul, _setting);
 }
 
 std::string PyramidMaterial::ToString() const { return "PyramidMaterial"; }

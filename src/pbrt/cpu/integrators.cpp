@@ -40,6 +40,7 @@
 #include <pbrt/util/stats.h>
 #include <pbrt/util/string.h>
 #include <fstream>
+#include <iri/util.hpp>
 
 #include <cstdio>
 #include <algorithm>
@@ -223,6 +224,27 @@ void ImageTileIntegrator::Render() {
         fclose(mseOutFile);
     DisconnectFromDisplayServer();
     LOG_VERBOSE("Rendering finished");
+    
+    if (g_pathsLogged) {
+        std::vector<float> probs = std::vector<float>(g_exitPathCount.size(), 0.0f);
+        for (int i = 0; i < g_exitPathCount.size(); i++) {
+            probs[i] = static_cast<float>(g_exitPathCount[i]) / g_logCount;
+        }
+        FILE* csv = fopen("distSpecular.csv", "w");
+        fprintf(csv, "logCount\n%u\n\n", g_logCount);
+        fprintf(csv, "index,indexStr,count,prob\n");
+        for (unsigned int i = 0; i < probs.size(); i++) {
+            std::string path = PyramidBRDF::reflectDistIndexToString(i);
+            fprintf(csv, "%i,%s,%u,%e\n",i,path.c_str(),g_exitPathCount[i],probs[i]);
+        }
+        fprintf(csv,"\ninvalidReason,count,prob\n");
+        for (auto const& p : g_invalidCount) {
+            fprintf(csv, "%s,%u,%f\n", p.first.c_str(), p.second, static_cast<float>(p.second)/g_logCount);
+        }
+        fflush(csv);
+        fclose(csv);
+    }
+
 }
 
 // RayIntegrator Method Definitions
@@ -619,13 +641,43 @@ STAT_PERCENT("Integrator/Regularized BSDFs", regularizedBSDFs, totalBSDFs);
 STAT_INT_DISTRIBUTION("Integrator/Path length", pathLength);
 
 // PathIntegrator Method Definitions
-PathIntegrator::PathIntegrator(int maxDepth, int maxIriDepth, Camera camera, Sampler sampler,
+PathIntegrator::PathIntegrator(int maxDepth, int maxIriDepth, bool savePathDist, Camera camera, Sampler sampler,
                                Primitive aggregate, std::vector<Light> lights,
                                const std::string &lightSampleStrategy, bool regularize)
     : RayIntegrator(camera, sampler, aggregate, lights),
-      maxDepth(maxDepth), maxIriDepth(maxIriDepth),
+      maxDepth(maxDepth), maxIriDepth(maxIriDepth), savePathDist(savePathDist),
       lightSampler(LightSampler::Create(lightSampleStrategy, lights, Allocator())),
       regularize(regularize) {}
+
+// Logged by PathIntegrator:
+bool g_pathsLogged = false;
+unsigned int g_logCount = 0;
+std::vector<unsigned int> g_exitPathCount;
+std::map<std::string, unsigned int> g_invalidCount;
+
+void ensureLogging(int maxIriDepth) {
+    if (g_pathsLogged)
+        return;
+    g_pathsLogged = true;
+    g_exitPathCount = std::vector<unsigned int>(pow4sum(maxIriDepth), 0u);
+    g_invalidCount = std::map<std::string, unsigned int>();
+}
+
+void logReflectPath(std::string path, bool validEscape) {
+    if(path.empty())
+        return;
+    // if(validEscape)
+    //     assert(path.length() <= maxIriDepth)
+
+    g_logCount+=1;
+    if(!validEscape){
+        std::map<std::string, unsigned int>::iterator iter = g_invalidCount.find(path);
+        g_invalidCount[path] += 1;
+    } else {
+        unsigned int exitIndex = PyramidBRDF::reflectDistStringToIndex(path);
+        g_exitPathCount[exitIndex] += 1;
+    }
+}
 
 SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lambda,
                                    Sampler sampler, ScratchBuffer &scratchBuffer,
@@ -634,6 +686,9 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
     SampledSpectrum L(0.f), beta(1.f);
     int depth = 0;
     int iriDepth = 0;
+    std::string reflectPath;
+    if(savePathDist)
+        ensureLogging(maxIriDepth);
 
 #ifdef PBRT_DEBUG_BUILD
 	// FILE *file = fopen("debug.txt", "a");
@@ -666,7 +721,8 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
                     L += beta * w_b * Le;
                 }
             }
-
+            if(savePathDist && !reflectPath.empty()) 
+                logReflectPath(reflectPath, true);
             break;
         }
 
@@ -730,8 +786,11 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
         ++totalBSDFs;
 
         // End path if maximum depth reached
-        if (depth++ == maxDepth)
+        if (depth++ == maxDepth) {
+            if(savePathDist && !reflectPath.empty())
+                logReflectPath("Depth", false);
             break;
+        }
 
         // Sample direct illumination from the light sources
         if (IsNonSpecular(bsdf.Flags())) {
@@ -746,22 +805,45 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
         Vector3f wo = -ray.d;
         Float u = sampler.Get1D();
 
+        std::string name = bsdf.bxdf.ToString();
+		bool mesh = (name == SpecularBRDF::Name());
+        if (mesh) {
+            reflectPath += bsdf.faceIndexStr();
+        } else {
+            if(savePathDist && !reflectPath.empty()){
+                logReflectPath(reflectPath, true);
+                reflectPath = "";
+            }
+        }
+
 		if (maxIriDepth < maxDepth) {
-			std::string name = bsdf.bxdf.ToString();
-			bool mesh = (name == SpecularBRDF::Name());
-			if (!mesh)
-				iriDepth = 0;
-			else {
-                printf("IriDepth reached");
+			if (!mesh) {
+                iriDepth = 0;
+                if(savePathDist && !reflectPath.empty()) {
+                    logReflectPath(reflectPath, true);
+                    reflectPath = "";
+                }
+            } else {
+                #ifdef PBRT_DEBUG_BUILD
+                    // printf("IriDepth reached\n");
+                #endif
 				iriDepth += 1;
-				if (iriDepth > maxIriDepth)
-					break;
+				if (iriDepth > maxIriDepth) {
+                    if(savePathDist && !reflectPath.empty()) {
+                        logReflectPath("IriDepth", false);
+                    }
+                    break;
+                }
 			}
 		}
 
 		pstd::optional<BSDFSample> bs = bsdf.Sample_f(wo, u, sampler.Get2D());
-        if (!bs)
+        if (!bs) {
+            if(savePathDist && !reflectPath.empty()) {
+                logReflectPath("NoBRDF", false);
+            }
             break;
+        }
 
 
 		// Update path state variables after surface scattering
@@ -786,8 +868,12 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
         SampledSpectrum rrBeta = beta * etaScale;
         if (rrBeta.MaxComponentValue() < 1 && depth > 1) {
             Float q = std::max<Float>(0, 1 - rrBeta.MaxComponentValue());
-            if (sampler.Get1D() < q)
+            if (sampler.Get1D() < q) {
+                if(savePathDist && !reflectPath.empty()) {
+                    logReflectPath("Roulette", false);
+                }
                 break;
+            }
             beta /= 1 - q;
             DCHECK(!IsInf(beta.y(lambda)));
         }
@@ -854,9 +940,10 @@ std::unique_ptr<PathIntegrator> PathIntegrator::Create(
     Primitive aggregate, std::vector<Light> lights, const FileLoc *loc) {
     int maxDepth = parameters.GetOneInt("maxdepth", 5);
     int maxIriDepth = parameters.GetOneInt("maxiridepth", maxDepth);
+    bool savePathDist = parameters.GetOneBool("savePathDist", false);
     std::string lightStrategy = parameters.GetOneString("lightsampler", "bvh");
     bool regularize = parameters.GetOneBool("regularize", false);
-    return std::make_unique<PathIntegrator>(maxDepth, maxIriDepth, camera, sampler, aggregate, lights,
+    return std::make_unique<PathIntegrator>(maxDepth, maxIriDepth, savePathDist, camera, sampler, aggregate, lights,
                                             lightStrategy, regularize);
 }
 
