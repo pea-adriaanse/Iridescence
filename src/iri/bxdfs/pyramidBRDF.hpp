@@ -346,14 +346,22 @@ namespace pbrt
 				for(unsigned int i = 0; i < optionCount; i++) {
 					exitProbSum+=reflectDist.exitProbs[i];
 				}
-				fprintf(csv, "wo.x,wo.y,wo.z,uc,exitProbSum,chosen,choice\n%f,%f,%f,%f,%f,%i,%i\n\n",wo.x,wo.y,wo.z,uc,exitProbSum,chosen,choice);
 				fprintf(csv, "index,indexStr,exitProb,exitBrdf\n");
 				for(unsigned int i = 0; i < optionCount; i++) {
 					std::string indexStr = reflectDistIndexToString(i);
 					fprintf(csv, "%i,%s,%f,%e\n",i,indexStr.c_str(),reflectDist.exitProbs[i],reflectDist.exitBrdfs[i]);
 				}
+				printf("wo: %f,%f,%f\n", wo.x,wo.y,wo.z);
+				fprintf(csv, "\nwo.x,wo.y,wo.z,uc,exitProbSum,chosen,choice\n%f,%f,%f,%f,%f,%i,%i\n\n",wo.x,wo.y,wo.z,uc,exitProbSum,chosen,choice);
 				fflush(csv);
 				fclose(csv);
+				
+				// Write exact direction to binary file.
+				Float woDir[3] = {wo.x, wo.y, wo.z};
+				FILE* woBinary  = fopen("distWo.bin","wb");
+				fwrite(&woDir, sizeof(Float), 3, woBinary);
+				fclose(woBinary);
+				
 			}
 			
 			// if (!chosen) {
