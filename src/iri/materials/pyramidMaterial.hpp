@@ -6,50 +6,63 @@
 
 namespace pbrt {
 class PyramidMaterial {
-  private:
-	Image *normalMap;
+	private:
+	Image* normalMap;
 	Float peakHeight;
 	Float angle;
 	int reflectCount;
 	bool shadowPaul;
 	std::string setting;
+	Vector3f woVector;
+	std::string distOutFile;
 
-  public:
+	public:
 	using BxDF = PyramidBRDF;
 	using BSSRDF = void;
 
-	static const char *Name() { return "PyramidMaterial"; }
+	static const char* Name() { return "PyramidMaterial"; }
 
-	static PyramidMaterial *Create(const TextureParameterDictionary &parameters,
-								   Image *normalMap, const FileLoc *loc,
+	static PyramidMaterial* Create(const TextureParameterDictionary& parameters,
+								   Image* normalMap,
+								   const FileLoc* loc,
 								   Allocator alloc);
 
-	PyramidMaterial(Image *normalMap, Float peakHeight, Float angle,
-					int reflectCount, bool shadowPaul, std::string setting)
+	PyramidMaterial(Image* normalMap,
+					Float peakHeight,
+					Float angle,
+					int reflectCount,
+					bool shadowPaul,
+					std::string setting,
+					Vector3f woVector,
+					std::string distOutFile)
 		: normalMap(normalMap),
 		  peakHeight(peakHeight),
 		  angle(angle),
 		  reflectCount(reflectCount),
 		  shadowPaul(shadowPaul),
-		  setting(setting) {}
+		  setting(setting),
+		  woVector(woVector),
+		  distOutFile(distOutFile) {}
 
 	std::string ToString() const;
 
 	template <typename TextureEvaluator>
-	PBRT_CPU_GPU BxDF GetBxDF(TextureEvaluator texEval, MaterialEvalContext ctx,
-							  SampledWavelengths &lambda) const {
+	PBRT_CPU_GPU BxDF GetBxDF(TextureEvaluator texEval,
+							  MaterialEvalContext ctx,
+							  SampledWavelengths& lambda) const {
 		// Float h = texEval(peakHeight, ctx);
 		// Float a = Clamp(texEval(angle, ctx), 0.0, 90.0);
 		// Float r = Clamp(texEval(reflectance, ctx), 0.0, 1.0);
 		// int reflectCount = texEval()
-		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul, setting);
+		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul, setting, woVector,
+						   distOutFile);
 	}
 
 	template <typename TextureEvaluator>
 	PBRT_CPU_GPU BSSRDF GetBSSRDF(TextureEvaluator texEval,
 								  MaterialEvalContext ctx,
-								  SampledWavelengths &lambda,
-								  ScratchBuffer &buf) const {}
+								  SampledWavelengths& lambda,
+								  ScratchBuffer& buf) const {}
 
 	template <typename TextureEvaluator>
 	PBRT_CPU_GPU bool CanEvaluateTextures(TextureEvaluator texEval) const {
@@ -57,7 +70,7 @@ class PyramidMaterial {
 		return true;
 	}
 
-	PBRT_CPU_GPU const Image *GetNormalMap() const { return normalMap; }
+	PBRT_CPU_GPU const Image* GetNormalMap() const { return normalMap; }
 
 	PBRT_CPU_GPU FloatTexture GetDisplacement() const { return nullptr; }
 

@@ -16,7 +16,7 @@ class PyramidTest : public testing::Test {
 	Vector3f normals[4];
 
 	PyramidTest() {
-		this->brdf = PyramidBRDF(1.0, 54.7, 1.0, false, "none");
+		this->brdf = PyramidBRDF(1.0, 54.7, 1.0, false, "none", Vector3f(0,0,0), std::string(""));
 		this->angleRad = Radians(54.7);
 
 		// Recalculate normals (private inside brdf)
@@ -107,7 +107,7 @@ void expectNear(Vector3f actual, Vector3f expected, float delta) {
 }
 
 TEST_F(PyramidTest, CalcReflectDist2) {
-	this->brdf = PyramidBRDF(1.0, 45.0, 2, false, "none");
+	this->brdf = PyramidBRDF(1.0, 45.0, 2, false, "none", Vector3f(0,0,0), std::string(""));
 	PyramidBRDF::ReflectDist dist;
 	Vector3f dir = Vector3f(0,0,1);
 	brdf.calcReflectDist(&dist, dir);

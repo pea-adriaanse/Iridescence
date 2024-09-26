@@ -920,4 +920,9 @@ FloatTexture TextureParameterDictionary::GetFloatTextureOrNull(const std::string
 void TextureParameterDictionary::ReportUnused() const {
     dict->ReportUnused();
 }
+
+void TextureParameterDictionary::ReportError(const std::string &name, const char* message) const {
+    ErrorExit(dict->loc(name), message);
+}
+
 }  // namespace pbrt

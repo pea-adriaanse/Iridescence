@@ -239,6 +239,7 @@ class TextureParameterDictionary {
     FloatTexture GetFloatTextureOrNull(const std::string &name, Allocator alloc) const;
 
     void ReportUnused() const;
+    void ReportError(const std::string &name, const char* message) const;
 
     SpectrumTexture GetSpectrumTexture(std::string name, Spectrum defaultValue,
                                        SpectrumType spectrumType, Allocator alloc) const;
