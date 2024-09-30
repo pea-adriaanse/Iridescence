@@ -2,7 +2,11 @@
 
 cmake_minimum_required (VERSION 3.12)
 
-project (PBRT-V4 LANGUAGES CXX C CUDA)
+if (PBRT_USE_GPU)
+  project (PBRT-V4 LANGUAGES CXX C CUDA)
+else()
+  project (PBRT-V4 LANGUAGES CXX C)
+endif()
 
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
