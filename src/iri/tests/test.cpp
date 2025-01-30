@@ -133,3 +133,13 @@ TEST_F(PyramidTest, ReflectDistIndexToString){
 	str = brdf.reflectDistIndexToString(70);
 	EXPECT_EQ("SEW", str);
 }
+
+TEST_F(PyramidTest, BounceBackIndex){
+	std::string start = "NE";
+	unsigned int startIndex = brdf.reflectDistStringToIndex(start);
+	std::string next = "NEW";
+	unsigned int nextIndex = brdf.reflectDistStringToIndex(next);
+	unsigned int backBounceIndex = brdf.getBackbounceIndex(startIndex, nextIndex);
+	std::string backBounce = brdf.reflectDistIndexToString(backBounceIndex);
+	EXPECT_EQ(backBounce, "NEWEN");
+}

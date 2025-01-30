@@ -7,6 +7,8 @@
 
 #include <algorithm>
 #include <array>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include <cmath>
 #include <cstdio>
 
@@ -81,6 +83,8 @@ class PyramidBRDF {
 		std::array<Float, N> nexitBrdfs;
 		std::array<Float, N> nexitProbs;
 		std::array<Float, N> exitProbs;
+		// std::array<Float, N> backCorrelation;
+		std::array<Float, N> stolenProb;
 	};
 	typedef struct ReflectDistS<maxOptionCount> ReflectDist;
 
@@ -120,9 +124,66 @@ class PyramidBRDF {
 		return index;
 	}
 
+	static unsigned int getBackbounceIndex(uint parentIndex, uint ownIndex) {
+		while(parentIndex > 4){
+			uint face = parentIndex % 4;
+			parentIndex = parentIndex / 4 - 1;
+			ownIndex = ownIndex * 4 + 4 + face;
+		}
+		ownIndex = ownIndex * 4 + 4 + parentIndex;
+		return ownIndex;
+	}
+
+	PBRT_CPU_GPU Float getCorrelation(Vector3f inDir, Vector3f outDir, bool xAxis) const {
+		// if(inDir.z != 1 && outDir.z != 1) {
+		// 	inDir.z = 0;
+		// 	inDir = Normalize(inDir);
+		// 	outDir.z = 0;
+		// 	outDir = Normalize(outDir);
+		// }
+		// Float dot = Clamp(Dot(inDir, outDir), 0, 1);
+		// Float angle = std::acos(dot);
+		// return Clamp((0 - angle)/(M_PI/8), 0, 1); // linear slape
+
+		if (outDir.z >= sin(angle) ) return 0;
+
+		Float theta = std::acos(outDir.z);
+		Float phi;
+		if(xAxis)
+		 	phi = std::acos(outDir.x/std::sin(theta));
+		else
+			phi = std::asin(outDir.x/std::sin(theta));
+
+		Float elevationFactor;
+		if (outDir.z <= 0)
+			elevationFactor = 1;
+		else
+			elevationFactor = 1-(outDir.z/std::sin(angle));
+			// elevationFactor = std::sin((theta-angle)*(M_PI / (M_PI - angle)));
+		Float phiFactor = std::pow(std::cos(phi), 8);
+		return elevationFactor * phiFactor;
+	}
+
+	static Float getStolenProb(Float backCorrelation, Float prob){
+		// return backCorrelation * prob;
+		// if(backCorrelation >= 0.98) return prob;
+		constexpr float maxDelta = 0.235; // arbitrary low dot product difference.
+		constexpr float maxDeltaInv = 1/maxDelta;
+		Float delta = 1 - backCorrelation;
+		if (delta <= maxDelta)
+			// return prob * (1 - (maxDeltaInv*delta) * (maxDeltaInv*delta)); // inverted parabola
+			return prob * ( 1 - delta/maxDelta ); // linear slope
+		return 0;
+	}
+
 	PBRT_CPU_GPU void calcReflectDist(ReflectDist* results, const Vector3f inDir) const {
 		uint parentLevelStart;
 		uint parentLevelSize;
+
+		// Zero initialize probs to permit backCorrelation stealing.
+		for (uint i = 0; i < maxOptionCount; i++){
+			results->stolenProb[i] = 0;
+		}
 
 		for (uint level = 0; level < reflectCount; level++) {
 			const uint levelStart = pow4sum(level);
@@ -132,19 +193,25 @@ class PyramidBRDF {
 				Vector3f childrenInDir;
 				Float childrenProb;
 				Float childrenBrdf;
+				// Float childrenBackCorrelation;
 
+				uint parentIndex = 0;
+				uint parentFace = 0;
 				// Determine input parameters
 				if (level == 0) {
 					childrenInDir = inDir;
 					childrenProb = 1.0;
 					childrenBrdf = 1.0;
+					// childrenBackCorrelation = 1.0;
 				} else {
 					// TODO: Double check next two lines
 					uint parentID = (entryID / 4);	//- 1;
-					uint parent = parentID + parentLevelStart;
-					childrenInDir = -results->outDirs[parent];
-					childrenProb = results->nexitProbs[parent];
-					childrenBrdf = results->nexitBrdfs[parent];
+					parentIndex = parentID + parentLevelStart;
+					parentFace = parentID % 4;
+					childrenInDir = -results->outDirs[parentIndex];
+					childrenProb = results->nexitProbs[parentIndex];
+					childrenBrdf = results->nexitBrdfs[parentIndex];
+					// childrenBackCorrelation = results->backCorrelation[parentIndex];
 				}
 
 				// Skip zero children
@@ -152,7 +219,7 @@ class PyramidBRDF {
 				ZeroChildren:
 					for (unsigned face = 0; face < 4; face++) {
 						results->outDirs[index + face] = Vector3f(0, 0, 0);
-						results->exitProbs[index + face] = 0;
+						// results->exitProbs[index + face] = 0; Already initialized to 0
 						results->nexitProbs[index + face] = 0;
 						results->nexitBrdfs[index + face] = 0;
 						results->exitBrdfs[index + face] = 0;
@@ -179,15 +246,33 @@ class PyramidBRDF {
 
 				// Results
 				for (uint face = 0; face < 4; face++) {
+					uint faceIndex = index + face;
 					Vector3f outDir = Normalize(Reflect(childrenInDir, normals[face]));
-					results->outDirs[index + face] = outDir;
+					results->outDirs[faceIndex] = outDir;
 
 					Float prob = childrenProb * relativeProbs[face];
+					if(level > 0)
+						prob += results->stolenProb[faceIndex];
+
+					// Float backCorrelation = childrenBackCorrelation * Clamp(Dot(inDir, outDir), 0, 1);
+					// results->backCorrelation[faceIndex] = backCorrelation;
+					// if (level > 0 && level + 1 < reflectCount) {
+					if (level > 0 && level + 1 < reflectCount && ((face + 2) % 4) == parentFace) {
+						Float backCorrelation = getCorrelation(inDir, outDir, (parentFace%2) == 0);
+						Float stolenProb = getStolenProb(backCorrelation, prob);
+						prob -= stolenProb;
+						// uint backBounceIndex = getBackbounceIndex(parentIndex, index + face);
+						uint backBounceIndex = faceIndex * 4 + 4 + parentFace;
+						// results->exitProbs[backBounceIndex] += stolenProb;
+						results->stolenProb[backBounceIndex] = stolenProb;
+					}
+
 					Float shadowing = G1(outDir, normals[face]);
 					Float exitProb = prob * shadowing;
 					Float nexitProb = prob - exitProb;
-					results->exitProbs[index + face] = exitProb;
-					results->nexitProbs[index + face] = nexitProb;
+
+					results->exitProbs[faceIndex] += exitProb;
+					results->nexitProbs[faceIndex] = nexitProb;
 
 					Float exitBrdf =
 						childrenBrdf * shadowing;  // TODO: double check, seems wrong when
@@ -195,8 +280,8 @@ class PyramidBRDF {
 					Float nexitBrdf =
 						childrenBrdf * (1 - shadowing);	 // TODO: double check, seems wrong when
 														 // considering this as statistics?
-					results->exitBrdfs[index + face] = exitBrdf;
-					results->nexitBrdfs[index + face] = nexitBrdf;
+					results->exitBrdfs[faceIndex] = exitBrdf;
+					results->nexitBrdfs[faceIndex] = nexitBrdf;
 				}
 			}
 			parentLevelSize = levelSize;
@@ -329,11 +414,10 @@ class PyramidBRDF {
 			for (unsigned int i = 0; i < optionCount; i++) {
 				exitProbSum += reflectDist.exitProbs[i];
 			}
-			fprintf(csv, "index,indexStr,exitProb,exitBrdf\n");
+			fprintf(csv, "index,indexStr,stolenProb,exitProb,exitBrdf\n");
 			for (unsigned int i = 0; i < optionCount; i++) {
 				std::string indexStr = reflectDistIndexToString(i);
-				fprintf(csv, "%i,%s,%f,%e\n", i, indexStr.c_str(), reflectDist.exitProbs[i],
-						reflectDist.exitBrdfs[i]);
+				fprintf(csv, "%i,%s,%f,%f,%e\n", i, indexStr.c_str(), reflectDist.stolenProb[i], reflectDist.exitProbs[i] , reflectDist.exitBrdfs[i]);
 			}
 			printf("wo: %f,%f,%f\n", wo.x, wo.y, wo.z);
 			fprintf(csv,
