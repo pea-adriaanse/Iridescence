@@ -14,7 +14,25 @@
 
 namespace pbrt {
 
+typedef struct BoundsThetaPhi_s {
+	double min;
+	double max;
+	double stepSize;
+} BoundsThetaPhi;
+
 class PyramidBRDF {
+	public:
+	static std::vector<double> backBounceTable;
+	static BoundsThetaPhi thetaBounds;
+	static BoundsThetaPhi phiBounds;
+	static unsigned int thetaDimension;
+	static unsigned int phiDimension;
+
+	// Find value by trilinear interpolation
+	double readTable(double theta, double phi){
+		
+	}
+
 	private:
 	typedef unsigned int uint;
 

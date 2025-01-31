@@ -39,6 +39,8 @@
 #include <utility>
 #include <vector>
 
+#include <iri/bxdfs/pyramidBRDF.hpp>
+
 namespace pbrt {
 
 ///////////////////////////////////////////////////////////////////////////
@@ -714,6 +716,59 @@ void parse(ParserTarget *target, std::unique_ptr<Tokenizer> t) {
             else
                 syntaxError(*tok);
             break;
+
+        case 'B':
+            if(tok->token == "BackBounce") {
+                Token filenameToken = *nextToken(TokenRequired);
+                std::string filename = toString(dequoteString(filenameToken));
+                filename = ResolveFilename(filename);
+                std::ifstream tableFile(filename, std::ios::binary);
+                if(!tableFile.is_open())
+                    ErrorExit(&tok->loc, "Could not open file");
+
+                std::string line;
+                std::getline(tableFile, line); // types
+                if(line != "double double")
+                    ErrorExit(&tok->loc, "File header wrong types");
+
+                unsigned int thetaBoundsLength;
+                unsigned int phiBoundsLength;
+                std::getline(tableFile, line);
+                size_t first = line.find_first_not_of(' ');
+                auto [ptr, errorCode] = std::from_chars(line.data() + first, line.data()+line.size(), thetaBoundsLength);
+                if(errorCode != std::errc())
+                    ErrorExit(&tok->loc, "thetaBoundsLength expected");
+                std::from_chars(ptr, line.data()+line.size(), phiBoundsLength);
+                if(errorCode != std::errc())
+                    ErrorExit(&tok->loc, "phiBoundsLength expected");
+
+                unsigned int thetaDimension;
+                unsigned int phiDimension;
+                std::getline(tableFile, line);
+                size_t first = line.find_first_not_of(' ');
+                auto [ptr, errorCode] = std::from_chars(line.data() + first, line.data()+line.size(), thetaDimension);
+                if(errorCode != std::errc())
+                    ErrorExit(&tok->loc, "thetaDimension expected");
+                std::from_chars(ptr, line.data()+line.size(), phiDimension);
+                if(errorCode != std::errc())
+                    ErrorExit(&tok->loc, "phiDimension expected");
+                PyramidBRDF::thetaDimension = thetaDimension;
+                PyramidBRDF::phiDimension = phiDimension;
+
+                BoundsThetaPhi thetaBounds;
+                BoundsThetaPhi phiBounds;
+                tableFile.read((char*) &thetaBounds, sizeof(BoundsThetaPhi));
+                tableFile.read((char*) &phiBounds, sizeof(BoundsThetaPhi));
+                PyramidBRDF::thetaBounds = thetaBounds;
+                PyramidBRDF::phiBounds = phiBounds;
+
+                std::vector<double> backBounceTable;
+                size_t tableSize = thetaDimension*phiDimension;
+                backBounceTable.resize(tableSize);
+                tableFile.read((char*)backBounceTable.data(), tableSize*sizeof(double));
+                PyramidBRDF::backBounceTable = backBounceTable;
+                tableFile.close();
+            }
 
         case 'C':
             if (tok->token == "ConcatTransform") {

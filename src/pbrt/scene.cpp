@@ -26,6 +26,8 @@
 #include <pbrt/util/string.h>
 #include <pbrt/util/transform.h>
 
+#include <iri/bxdfs/pyramidBRDF.hpp>
+
 #include <iostream>
 #include <mutex>
 
