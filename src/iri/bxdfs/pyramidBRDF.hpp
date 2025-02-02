@@ -11,6 +11,7 @@
 #include <math.h>
 #include <cmath>
 #include <cstdio>
+#include <stdexcept>
 
 namespace pbrt {
 
@@ -20,17 +21,83 @@ typedef struct BoundsThetaPhi_s {
 	double stepSize;
 } BoundsThetaPhi;
 
+namespace iri {
+extern std::vector<double> backBounceTable;
+extern BoundsThetaPhi thetaBounds;
+extern BoundsThetaPhi phiBounds;
+extern unsigned int thetaDimension;
+extern unsigned int phiDimension;
+}  // namespace iri
+
 class PyramidBRDF {
-	public:
-	static std::vector<double> backBounceTable;
-	static BoundsThetaPhi thetaBounds;
-	static BoundsThetaPhi phiBounds;
-	static unsigned int thetaDimension;
-	static unsigned int phiDimension;
+	static double readTable(unsigned int thetaIndex, unsigned int phiIndex) {
+		if (thetaIndex >= iri::thetaDimension || phiIndex > iri::phiDimension) {
+			std::string errorString =
+				"Backbounce table of dimensions [" + std::to_string(iri::thetaDimension) + "][" +
+				std::to_string(iri::phiDimension) + "] accessed at index [" +
+				std::to_string(thetaIndex) + "][" + std::to_string(phiIndex) + "]";
+			throw std::out_of_range(errorString.c_str());
+		}
+		if (phiIndex * iri::thetaDimension + thetaIndex >= iri::backBounceTable.size())
+			throw std::out_of_range("Index out of range.");
+		return iri::backBounceTable.at(phiIndex * iri::thetaDimension + thetaIndex);
+	}
+
+	static double linInterpolate(double val1, double val2, double factor) {
+		return val1 * factor + val2 * (1 - factor);
+	}
+
+	static double linInterpolate2D(double ll,
+								   double hl,
+								   double lh,
+								   double hh,
+								   double xfactor,
+								   double yfactor) {
+		double bottom = linInterpolate(ll, hl, xfactor);
+		double top = linInterpolate(hl, hh, xfactor);
+		return linInterpolate(bottom, top, yfactor);
+	}
 
 	// Find value by trilinear interpolation
-	double readTable(double theta, double phi){
-		
+	// Valid input: theta [-pi_2, pi_2], phi [-2pi, 4pi]
+	static double readTable(double theta, double phi) {
+		// Transform input to [0, pi_2], [0, pi] range
+		if (theta < 0) {  // no negative theta
+			theta = -theta;
+			phi += Pi;
+		}
+		if (phi < 0)  // no negative phi
+			phi += 2 * Pi;
+		phi = fmod(phi, 2 * Pi);  // collapse to [0,2pi>
+		if (phi > Pi)			  // Mirror phi as backBounce is symmetric.
+			phi = 2 * Pi - phi;
+
+		if (theta < iri::thetaBounds.min || theta > iri::thetaBounds.max ||
+			phi < iri::phiBounds.min || phi > iri::phiBounds.max) {
+			fprintf(stderr, "Invalid table read");
+			return std::numeric_limits<double>::quiet_NaN();
+		}
+
+		// Calculate index  coordinates.
+		// Floating point error prevention by use of max/min
+		double thetaDiff = std::max<double>(0.0, theta - iri::thetaBounds.min);
+		double phiDiff = std::max<double>(0.0, phi - iri::phiBounds.min);
+		unsigned int thetaLow = std::min<unsigned int>(
+			(unsigned int)(thetaDiff / iri::thetaBounds.stepSize), iri::thetaDimension - 1);
+		unsigned int phiLow = std::min<unsigned int>(
+			(unsigned int)(thetaDiff / iri::thetaBounds.stepSize), iri::phiDimension - 1);
+
+		unsigned int thetaHigh =
+			std::min<unsigned int>(thetaLow + 1, iri::thetaDimension - 1);				   // clamp
+		unsigned int phiHigh = std::min<unsigned int>(phiLow + 1, iri::phiDimension - 1);  // clamp
+
+		double ll = readTable(thetaLow, phiLow);
+		double hl = readTable(thetaHigh, phiLow);
+		double lh = readTable(thetaLow, phiHigh);
+		double hh = readTable(thetaHigh, phiHigh);
+		double xfactor = thetaDiff - thetaLow;
+		double yfactor = phiDiff - phiLow;
+		return linInterpolate2D(ll, hl, lh, hh, xfactor, yfactor);
 	}
 
 	private:
@@ -79,6 +146,12 @@ class PyramidBRDF {
 		// 0.816137612
 		// 0.00000000
 		// 0.577857614
+
+		// Check Validity
+		if (iri::backBounceTable.size() != iri::thetaDimension * iri::phiDimension)
+			ErrorExit("Table size incorrect, expected %u (%u * %u) but got: %u",
+					  (iri::thetaDimension * iri::phiDimension), iri::thetaDimension,
+					  iri::phiDimension, iri::backBounceTable.size());
 	}
 	// BxDF Interface:
 	// TODO: used by ??
@@ -102,7 +175,7 @@ class PyramidBRDF {
 		std::array<Float, N> nexitProbs;
 		std::array<Float, N> exitProbs;
 		// std::array<Float, N> backCorrelation;
-		std::array<Float, N> stolenProb;
+		// std::array<Float, N> stolenProb;
 	};
 	typedef struct ReflectDistS<maxOptionCount> ReflectDist;
 
@@ -143,7 +216,7 @@ class PyramidBRDF {
 	}
 
 	static unsigned int getBackbounceIndex(uint parentIndex, uint ownIndex) {
-		while(parentIndex > 4){
+		while (parentIndex > 4) {
 			uint face = parentIndex % 4;
 			parentIndex = parentIndex / 4 - 1;
 			ownIndex = ownIndex * 4 + 4 + face;
@@ -152,56 +225,50 @@ class PyramidBRDF {
 		return ownIndex;
 	}
 
-	PBRT_CPU_GPU Float getCorrelation(Vector3f inDir, Vector3f outDir, bool xAxis) const {
-		// if(inDir.z != 1 && outDir.z != 1) {
-		// 	inDir.z = 0;
-		// 	inDir = Normalize(inDir);
-		// 	outDir.z = 0;
-		// 	outDir = Normalize(outDir);
-		// }
-		// Float dot = Clamp(Dot(inDir, outDir), 0, 1);
-		// Float angle = std::acos(dot);
-		// return Clamp((0 - angle)/(M_PI/8), 0, 1); // linear slape
+	static void correctExitProbsBackbounce(std::array<Float, maxOptionCount>& exitProbs,
+										   double theta,
+										   double phi) {
+		uint EW = reflectDistStringToIndex("EW");
+		uint EWE = reflectDistStringToIndex("EWE");
+		double backBounceProbE = readTable(theta, phi);
+		double backBounceE = backBounceProbE * exitProbs[EW];
+		exitProbs[EW] = exitProbs[EW] - backBounceE;
+		exitProbs[EWE] = exitProbs[EWE] + backBounceE;
 
-		if (outDir.z >= sin(angle) ) return 0;
+		uint NS = reflectDistStringToIndex("NS");
+		uint NSN = reflectDistStringToIndex("NSN");
+		double phiN = phi - PiOver2;
+		double backBounceProbN = readTable(theta, phiN);
+		double backBounceN = backBounceProbN * exitProbs[NS];
+		exitProbs[NS] = exitProbs[NS] - backBounceN;
+		exitProbs[NSN] = exitProbs[NSN] + backBounceN;
 
-		Float theta = std::acos(outDir.z);
-		Float phi;
-		if(xAxis)
-		 	phi = std::acos(outDir.x/std::sin(theta));
-		else
-			phi = std::asin(outDir.x/std::sin(theta));
+		uint WE = reflectDistStringToIndex("WE");
+		uint WEW = reflectDistStringToIndex("WEW");
+		double phiW = phi + Pi;
+		double backBounceProbW = readTable(theta, phiW);
+		double backBounceW = backBounceProbW * exitProbs[WE];
+		exitProbs[WE] = exitProbs[WE] - backBounceW;
+		exitProbs[WEW] = exitProbs[WEW] + backBounceW;
 
-		Float elevationFactor;
-		if (outDir.z <= 0)
-			elevationFactor = 1;
-		else
-			elevationFactor = 1-(outDir.z/std::sin(angle));
-			// elevationFactor = std::sin((theta-angle)*(M_PI / (M_PI - angle)));
-		Float phiFactor = std::pow(std::cos(phi), 8);
-		return elevationFactor * phiFactor;
-	}
-
-	static Float getStolenProb(Float backCorrelation, Float prob){
-		// return backCorrelation * prob;
-		// if(backCorrelation >= 0.98) return prob;
-		constexpr float maxDelta = 0.235; // arbitrary low dot product difference.
-		constexpr float maxDeltaInv = 1/maxDelta;
-		Float delta = 1 - backCorrelation;
-		if (delta <= maxDelta)
-			// return prob * (1 - (maxDeltaInv*delta) * (maxDeltaInv*delta)); // inverted parabola
-			return prob * ( 1 - delta/maxDelta ); // linear slope
-		return 0;
+		uint SN = reflectDistStringToIndex("SN");
+		uint SNS = reflectDistStringToIndex("SNS");
+		double phiS = phi + PiOver2;
+		double backBounceProbS = readTable(theta, phiS);
+		double backBounceS = backBounceProbS * exitProbs[SN];
+		exitProbs[SN] = exitProbs[SN] - backBounceS;
+		exitProbs[SNS] = exitProbs[SNS] + backBounceS;
+		return;
 	}
 
 	PBRT_CPU_GPU void calcReflectDist(ReflectDist* results, const Vector3f inDir) const {
 		uint parentLevelStart;
 		uint parentLevelSize;
 
-		// Zero initialize probs to permit backCorrelation stealing.
-		for (uint i = 0; i < maxOptionCount; i++){
-			results->stolenProb[i] = 0;
-		}
+		// // Zero initialize probs to permit backCorrelation stealing.
+		// for (uint i = 0; i < maxOptionCount; i++) {
+		// 	results->stolenProb[i] = 0;
+		// }
 
 		for (uint level = 0; level < reflectCount; level++) {
 			const uint levelStart = pow4sum(level);
@@ -269,21 +336,20 @@ class PyramidBRDF {
 					results->outDirs[faceIndex] = outDir;
 
 					Float prob = childrenProb * relativeProbs[face];
-					if(level > 0)
-						prob += results->stolenProb[faceIndex];
+					// if(level > 0)
+					// 	prob += results->stolenProb[faceIndex];
 
-					// Float backCorrelation = childrenBackCorrelation * Clamp(Dot(inDir, outDir), 0, 1);
-					// results->backCorrelation[faceIndex] = backCorrelation;
-					// if (level > 0 && level + 1 < reflectCount) {
-					if (level > 0 && level + 1 < reflectCount && ((face + 2) % 4) == parentFace) {
-						Float backCorrelation = getCorrelation(inDir, outDir, (parentFace%2) == 0);
-						Float stolenProb = getStolenProb(backCorrelation, prob);
-						prob -= stolenProb;
-						// uint backBounceIndex = getBackbounceIndex(parentIndex, index + face);
-						uint backBounceIndex = faceIndex * 4 + 4 + parentFace;
-						// results->exitProbs[backBounceIndex] += stolenProb;
-						results->stolenProb[backBounceIndex] = stolenProb;
-					}
+					// Float backCorrelation = childrenBackCorrelation * Clamp(Dot(inDir,
+					// outDir), 0, 1); results->backCorrelation[faceIndex] =
+					// backCorrelation; if (level > 0 && level + 1 < reflectCount) {
+					// if (level > 0 && level + 1 < reflectCount && ((face + 2) % 4) == parentFace)
+					// { Float backCorrelation = 	getCorrelation(inDir, outDir, (parentFace % 2)
+					// == 0); Float stolenProb = getStolenProb(backCorrelation, prob); Float
+					// stolenProb = getStolenProb() prob -= stolenProb; uint backBounceIndex =
+					// getBackbounceIndex(parentIndex, index + face); uint backBounceIndex =
+					// faceIndex * 4 + 4 + parentFace; results->exitProbs[backBounceIndex] +=
+					// stolenProb; results->stolenProb[backBounceIndex] = stolenProb;
+					// }
 
 					Float shadowing = G1(outDir, normals[face]);
 					Float exitProb = prob * shadowing;
@@ -383,8 +449,12 @@ class PyramidBRDF {
 		if (setting == "printDist")
 			wo = woVector;
 
+		double theta = std::acos(wo.z);
+		double phi = std::atan2(wo.y, wo.x);
+
 		ReflectDist reflectDist;
-		calcReflectDist(&reflectDist, wo);
+		// calcReflectDist(&reflectDist, wo);
+		correctExitProbsBackbounce(reflectDist.exitProbs, theta, phi);
 
 		unsigned int optionCount = pow4sum(reflectCount);
 		// determineProbs(wo, Float(1.0), 0, exitProb, outDir, 1, reflectCount);
@@ -435,7 +505,9 @@ class PyramidBRDF {
 			fprintf(csv, "index,indexStr,stolenProb,exitProb,exitBrdf\n");
 			for (unsigned int i = 0; i < optionCount; i++) {
 				std::string indexStr = reflectDistIndexToString(i);
-				fprintf(csv, "%i,%s,%f,%f,%e\n", i, indexStr.c_str(), reflectDist.stolenProb[i], reflectDist.exitProbs[i] , reflectDist.exitBrdfs[i]);
+				fprintf(csv, "%i,%s,%f,%f,%e\n", i, indexStr.c_str(),
+						0.0,  // reflectDist.stolenProb[i],
+						reflectDist.exitProbs[i], reflectDist.exitBrdfs[i]);
 			}
 			printf("wo: %f,%f,%f\n", wo.x, wo.y, wo.z);
 			fprintf(csv,
@@ -448,9 +520,9 @@ class PyramidBRDF {
 			// // Write exact direction to binary file.
 			// Float woDir[3] = {wo.x, wo.y, wo.z};
 			// FILE* woBinary = fopen("distWo.bin",
-			// 					   "wb");  // identical regardless of shadowing approach
-			// fwrite(&woDir, sizeof(Float), 3, woBinary);
-			// fclose(woBinary);
+			// 					   "wb");  // identical
+			// regardless of shadowing approach fwrite(&woDir, sizeof(Float), 3,
+			// woBinary); fclose(woBinary);
 		}
 
 		// if (!chosen) {
