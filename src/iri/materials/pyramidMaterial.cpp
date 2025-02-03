@@ -25,12 +25,13 @@ PyramidMaterial* PyramidMaterial::Create(const TextureParameterDictionary& param
 		fprintf(stderr, "Clamped reflectCount %i to %i", _reflectCountInt, _reflectCountClamped);
 
 	bool _shadowPaul = parameters.GetOneBool("shadowPaul", false);
+	bool _rebounce = parameters.GetOneBool("rebounce", false);
 	std::string _setting = parameters.GetOneString("setting", "none");
 	Vector3f _woVector = parameters.GetOneVector3f("wo", Vector3f(0, 0, 0));
 	std::string _distOutFile = parameters.GetOneString("distOutFile", std::string("dist.csv"));
 
 	return alloc.new_object<PyramidMaterial>(normalMap, _peakHeight, _angle, _reflectCountClamped,
-											 _shadowPaul, _setting, _woVector, _distOutFile);
+											 _shadowPaul, _rebounce, _setting, _woVector, _distOutFile);
 }
 
 std::string PyramidMaterial::ToString() const {

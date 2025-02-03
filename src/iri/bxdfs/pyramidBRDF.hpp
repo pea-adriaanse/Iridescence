@@ -1,5 +1,6 @@
 #pragma once
 #include <pbrt/base/bxdf.h>
+#include <pbrt/util/error.h>
 #include <pbrt/util/math.h>
 #include <pbrt/util/scattering.h>
 #include <pbrt/util/transform.h>
@@ -11,7 +12,6 @@
 #include <math.h>
 #include <cmath>
 #include <cstdio>
-#include <stdexcept>
 
 namespace pbrt {
 
@@ -31,15 +31,12 @@ extern unsigned int phiDimension;
 
 class PyramidBRDF {
 	static double readTable(unsigned int thetaIndex, unsigned int phiIndex) {
-		if (thetaIndex >= iri::thetaDimension || phiIndex > iri::phiDimension) {
-			std::string errorString =
-				"Backbounce table of dimensions [" + std::to_string(iri::thetaDimension) + "][" +
-				std::to_string(iri::phiDimension) + "] accessed at index [" +
-				std::to_string(thetaIndex) + "][" + std::to_string(phiIndex) + "]";
-			throw std::out_of_range(errorString.c_str());
-		}
+		if (thetaIndex >= iri::thetaDimension || phiIndex > iri::phiDimension)
+			ErrorExit("Backbounce table of dimensions [%u][%u] accessed at index [%u][%u].",
+					  std::to_string(iri::thetaDimension), std::to_string(iri::phiDimension),
+					  std::to_string(thetaIndex), std::to_string(phiIndex));
 		if (phiIndex * iri::thetaDimension + thetaIndex >= iri::backBounceTable.size())
-			throw std::out_of_range("Index out of range.");
+			ErrorExit("Index out of range.");  // should be redundant.
 		return iri::backBounceTable.at(phiIndex * iri::thetaDimension + thetaIndex);
 	}
 
@@ -74,8 +71,12 @@ class PyramidBRDF {
 
 		if (theta < iri::thetaBounds.min || theta > iri::thetaBounds.max ||
 			phi < iri::phiBounds.min || phi > iri::phiBounds.max) {
-			fprintf(stderr, "Invalid table read");
-			return std::numeric_limits<double>::quiet_NaN();
+			fprintf(
+				stderr,
+				"Invalid table read coordinates (%lf, %lf) outside bounds [%lf, %lf],[%lf, %lf]\n",
+				theta, phi, iri::thetaBounds.min, iri::thetaBounds.max, iri::phiBounds.min,
+				iri::phiBounds.max);
+			// return std::numeric_limits<double>::signaling_NaN();
 		}
 
 		// Calculate index  coordinates.
@@ -85,7 +86,7 @@ class PyramidBRDF {
 		unsigned int thetaLow = std::min<unsigned int>(
 			(unsigned int)(thetaDiff / iri::thetaBounds.stepSize), iri::thetaDimension - 1);
 		unsigned int phiLow = std::min<unsigned int>(
-			(unsigned int)(thetaDiff / iri::thetaBounds.stepSize), iri::phiDimension - 1);
+			(unsigned int)(phiDiff / iri::phiBounds.stepSize), iri::phiDimension - 1);
 
 		unsigned int thetaHigh =
 			std::min<unsigned int>(thetaLow + 1, iri::thetaDimension - 1);				   // clamp
@@ -95,8 +96,8 @@ class PyramidBRDF {
 		double hl = readTable(thetaHigh, phiLow);
 		double lh = readTable(thetaLow, phiHigh);
 		double hh = readTable(thetaHigh, phiHigh);
-		double xfactor = thetaDiff - thetaLow;
-		double yfactor = phiDiff - phiLow;
+		double xfactor = thetaDiff - (thetaLow * iri::thetaBounds.stepSize);
+		double yfactor = phiDiff - (phiLow * iri::phiBounds.stepSize);
 		return linInterpolate2D(ll, hl, lh, hh, xfactor, yfactor);
 	}
 
@@ -109,6 +110,7 @@ class PyramidBRDF {
 	// Float reflectance;
 	uint reflectCount;
 	bool shadowPaul;
+	bool rebounce;
 	std::string setting;
 	Vector3f woVector;	// when printDist is used
 	Vector3f normals[4];
@@ -124,6 +126,7 @@ class PyramidBRDF {
 				Float angle,
 				uint reflectCount,
 				bool shadowPaul,
+				bool rebounce,
 				std::string setting,
 				Vector3f woVector,
 				std::string distOutFile)
@@ -132,6 +135,7 @@ class PyramidBRDF {
 		  angleRad(Radians(angle)),
 		  reflectCount(reflectCount),
 		  shadowPaul(shadowPaul),
+		  rebounce(rebounce),
 		  setting(setting),
 		  woVector(woVector),
 		  distOutFile(distOutFile) {
@@ -225,39 +229,84 @@ class PyramidBRDF {
 		return ownIndex;
 	}
 
-	static void correctExitProbsBackbounce(std::array<Float, maxOptionCount>& exitProbs,
-										   double theta,
-										   double phi) {
+	void correctExitProbsBackbounce(std::array<Float, maxOptionCount>& exitProbs,
+									double theta,
+									double phi) const {
+		if (iri::backBounceTable.size() == 0)
+			ErrorExit(
+				"BackBounce table not initialized. Use `BackBounce \"<table-binary-path>\"` in "
+				".pbrt scene file.");
 		uint EW = reflectDistStringToIndex("EW");
 		uint EWE = reflectDistStringToIndex("EWE");
 		double backBounceProbE = readTable(theta, phi);
 		double backBounceE = backBounceProbE * exitProbs[EW];
+
+		double EW_old = exitProbs[EW];
+		double EW_new = exitProbs[EW] - backBounceE;
 		exitProbs[EW] = exitProbs[EW] - backBounceE;
+		double EWE_old = exitProbs[EWE];
+		double EWE_new = exitProbs[EWE] + backBounceE;
 		exitProbs[EWE] = exitProbs[EWE] + backBounceE;
+
+		// printf(
+		// 	"backBounceProbE=%lf->backBounceE=%lf\n\tEW_old=%lf\n\tEW_new=%lf\n\tEWE_old=%"
+		// 	"lf\n\tEWE_new=%lf\n",
+		// 	backBounceProbE, backBounceE, EW_old, EW_new, EWE_old, EWE_new);
 
 		uint NS = reflectDistStringToIndex("NS");
 		uint NSN = reflectDistStringToIndex("NSN");
 		double phiN = phi - PiOver2;
 		double backBounceProbN = readTable(theta, phiN);
 		double backBounceN = backBounceProbN * exitProbs[NS];
+
+		double NS_old = exitProbs[NS];
+		double NS_new = exitProbs[NS] - backBounceN;
 		exitProbs[NS] = exitProbs[NS] - backBounceN;
+		double NSN_old = exitProbs[NSN];
+		double NSN_new = exitProbs[NSN] + backBounceN;
 		exitProbs[NSN] = exitProbs[NSN] + backBounceN;
+
+		// printf(
+		// 	"backBounceProbN=%lf->backBounceN=%lf\n\tNS_old=%lf\n\tNS_new=%lf\n\tNSN_old=%"
+		// 	"lf\n\tNSN_new=%lf",
+		// 	backBounceProbN, backBounceN, NS_old, NS_new, NSN_old, NSN_new);
 
 		uint WE = reflectDistStringToIndex("WE");
 		uint WEW = reflectDistStringToIndex("WEW");
 		double phiW = phi + Pi;
 		double backBounceProbW = readTable(theta, phiW);
 		double backBounceW = backBounceProbW * exitProbs[WE];
+
+		double WE_old = exitProbs[WE];
+		double WE_new = exitProbs[WE] - backBounceW;
 		exitProbs[WE] = exitProbs[WE] - backBounceW;
+		double WEW_old = exitProbs[WEW];
+		double WEW_new = exitProbs[WEW] + backBounceW;
 		exitProbs[WEW] = exitProbs[WEW] + backBounceW;
+
+		// printf(
+		// 	"backBounceProbW=%lf->backBounceW=%lf\n\tWE_old=%lf\n\tWE_new=%lf\n\tWEW_old=%"
+		// 	"lf\n\tWEW_new=%lf",
+		// 	backBounceProbW, backBounceW, WE_old, WE_new, WEW_old, WEW_new);
 
 		uint SN = reflectDistStringToIndex("SN");
 		uint SNS = reflectDistStringToIndex("SNS");
 		double phiS = phi + PiOver2;
 		double backBounceProbS = readTable(theta, phiS);
 		double backBounceS = backBounceProbS * exitProbs[SN];
+
+		double SN_old = exitProbs[SN];
+		double SN_new = exitProbs[SN] - backBounceS;
 		exitProbs[SN] = exitProbs[SN] - backBounceS;
+		double SNS_old = exitProbs[SNS];
+		double SNS_new = exitProbs[SNS] + backBounceS;
 		exitProbs[SNS] = exitProbs[SNS] + backBounceS;
+
+		// printf(
+		// 	"backBounceProbS=%lf->backBounceS=%lf\n\tSN_old=%lf\n\tSN_new=%lf\n\tSNS_old=%"
+		// 	"lf\n\tSNS_new=%lf",
+		// 	backBounceProbS, backBounceS, SN_old, SN_new, SNS_old, SNS_new);
+
 		return;
 	}
 
@@ -304,7 +353,7 @@ class PyramidBRDF {
 				ZeroChildren:
 					for (unsigned face = 0; face < 4; face++) {
 						results->outDirs[index + face] = Vector3f(0, 0, 0);
-						// results->exitProbs[index + face] = 0; Already initialized to 0
+						results->exitProbs[index + face] = 0;
 						results->nexitProbs[index + face] = 0;
 						results->nexitBrdfs[index + face] = 0;
 						results->exitBrdfs[index + face] = 0;
@@ -355,7 +404,7 @@ class PyramidBRDF {
 					Float exitProb = prob * shadowing;
 					Float nexitProb = prob - exitProb;
 
-					results->exitProbs[faceIndex] += exitProb;
+					results->exitProbs[faceIndex] = exitProb;
 					results->nexitProbs[faceIndex] = nexitProb;
 
 					Float exitBrdf =
@@ -449,12 +498,13 @@ class PyramidBRDF {
 		if (setting == "printDist")
 			wo = woVector;
 
-		double theta = std::acos(wo.z);
-		double phi = std::atan2(wo.y, wo.x);
-
 		ReflectDist reflectDist;
-		// calcReflectDist(&reflectDist, wo);
-		correctExitProbsBackbounce(reflectDist.exitProbs, theta, phi);
+		calcReflectDist(&reflectDist, wo);
+		if (rebounce) {
+			double theta = std::acos(wo.z);
+			double phi = std::atan2(wo.y, wo.x);
+			correctExitProbsBackbounce(reflectDist.exitProbs, theta, phi);
+		}
 
 		unsigned int optionCount = pow4sum(reflectCount);
 		// determineProbs(wo, Float(1.0), 0, exitProb, outDir, 1, reflectCount);

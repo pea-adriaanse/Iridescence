@@ -12,6 +12,7 @@ class PyramidMaterial {
 	Float angle;
 	int reflectCount;
 	bool shadowPaul;
+	bool rebounce;
 	std::string setting;
 	Vector3f woVector;
 	std::string distOutFile;
@@ -32,6 +33,7 @@ class PyramidMaterial {
 					Float angle,
 					int reflectCount,
 					bool shadowPaul,
+					bool rebounce,
 					std::string setting,
 					Vector3f woVector,
 					std::string distOutFile)
@@ -40,6 +42,7 @@ class PyramidMaterial {
 		  angle(angle),
 		  reflectCount(reflectCount),
 		  shadowPaul(shadowPaul),
+		  rebounce(rebounce),
 		  setting(setting),
 		  woVector(woVector),
 		  distOutFile(distOutFile) {}
@@ -54,7 +57,7 @@ class PyramidMaterial {
 		// Float a = Clamp(texEval(angle, ctx), 0.0, 90.0);
 		// Float r = Clamp(texEval(reflectance, ctx), 0.0, 1.0);
 		// int reflectCount = texEval()
-		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul, setting, woVector,
+		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul, rebounce, setting, woVector,
 						   distOutFile);
 	}
 

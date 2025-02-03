@@ -3,7 +3,7 @@ LookAt 0 7000 0  # eye
        0 0 1   # up vector
 Camera "perspective" "float fov" 90
 
-Sampler "halton" "integer pixelsamples" 1
+Sampler "halton" "integer pixelsamples" 64
 Integrator "path" "integer maxdepth" 5 "integer maxiridepth" 5
 Film "rgb" "string filename" "cornell.png"
      "integer xresolution" [400] "integer yresolution" [400]
@@ -11,13 +11,17 @@ Film "rgb" "string filename" "cornell.png"
 WorldBegin
 Scale 100 100 100
 
+BackBounce "backBounce.bin"
+
 MakeNamedMaterial "CustomMat"
   "string type" [ "pyramid" ]
     "float peakHeight" 1.0
     "float angle" 54.7
     "bool shadowPaul" true
+    "bool rebounce" false
     "integer reflectCount" 3
-    "string setting" "printDist"
+    #"string setting" "printDist"
+    #"string setting" "printBackbounce"
   #"string type" [ "specular" ]
     #"float reflectance" 1.0
 
