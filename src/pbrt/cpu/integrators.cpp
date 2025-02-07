@@ -837,6 +837,7 @@ SampledSpectrum PathIntegrator::Li(RayDifferential ray, SampledWavelengths &lamb
 			}
 		}
 
+        // Printf("Wo: %f , %f , %f\n", wo.x, wo.y, wo.z);
 		pstd::optional<BSDFSample> bs = bsdf.Sample_f(wo, u, sampler.Get2D());
         if (!bs) {
             if(savePathDist && !reflectPath.empty()) {

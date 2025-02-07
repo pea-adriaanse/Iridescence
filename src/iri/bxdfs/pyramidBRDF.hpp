@@ -2,6 +2,7 @@
 #include <pbrt/base/bxdf.h>
 #include <pbrt/util/error.h>
 #include <pbrt/util/math.h>
+#include <pbrt/util/print.h>
 #include <pbrt/util/scattering.h>
 #include <pbrt/util/transform.h>
 #include <iri/util.hpp>
@@ -50,7 +51,7 @@ class PyramidBRDF {
 								   double hh,
 								   double xfactor,
 								   double yfactor) {
-		double bottom = linInterpolate(ll, hl, xfactor);
+		double bottom = linInterpolate(ll, lh, xfactor);
 		double top = linInterpolate(hl, hh, xfactor);
 		return linInterpolate(bottom, top, yfactor);
 	}
@@ -71,8 +72,7 @@ class PyramidBRDF {
 
 		if (theta < iri::thetaBounds.min || theta > iri::thetaBounds.max ||
 			phi < iri::phiBounds.min || phi > iri::phiBounds.max) {
-			fprintf(
-				stderr,
+			Printf(
 				"Invalid table read coordinates (%lf, %lf) outside bounds [%lf, %lf],[%lf, %lf]\n",
 				theta, phi, iri::thetaBounds.min, iri::thetaBounds.max, iri::phiBounds.min,
 				iri::phiBounds.max);
@@ -96,8 +96,9 @@ class PyramidBRDF {
 		double hl = readTable(thetaHigh, phiLow);
 		double lh = readTable(thetaLow, phiHigh);
 		double hh = readTable(thetaHigh, phiHigh);
-		double xfactor = (thetaDiff - (thetaLow * iri::thetaBounds.stepSize))/iri::thetaBounds.stepSize;
-		double yfactor = (phiDiff - (phiLow * iri::phiBounds.stepSize))/iri::phiBounds.stepSize;
+		double xfactor =
+			(thetaDiff - (thetaLow * iri::thetaBounds.stepSize)) / iri::thetaBounds.stepSize;
+		double yfactor = (phiDiff - (phiLow * iri::phiBounds.stepSize)) / iri::phiBounds.stepSize;
 		return linInterpolate2D(ll, hl, lh, hh, xfactor, yfactor);
 	}
 
@@ -236,17 +237,20 @@ class PyramidBRDF {
 			ErrorExit(
 				"BackBounce table not initialized. Use `BackBounce \"<table-binary-path>\"` in "
 				".pbrt scene file.");
+
 		uint EW = reflectDistStringToIndex("EW");
 		uint EWE = reflectDistStringToIndex("EWE");
 		double backBounceProbE = readTable(theta, phi);
 		double backBounceE = backBounceProbE * exitProbs[EW];
 
-		double EWE_old = exitProbs[EWE];
-		double EWE_delta = backBounceE - EWE_old;
-		if(EWE_delta>0) {
-			exitProbs[EW] = exitProbs[EW] - EWE_delta;
-			exitProbs[EWE] = exitProbs[EWE] + EWE_delta;
-		}
+		// double EWE_old = exitProbs[EWE];
+		// double EWE_delta = backBounceE - EWE_old;
+		// if (EWE_delta > 0) {
+		// 	exitProbs[EW] = exitProbs[EW] - EWE_delta;
+		// 	exitProbs[EWE] = exitProbs[EWE] + EWE_delta;
+		// }
+		exitProbs[EW] -= backBounceE;
+		exitProbs[EWE] += backBounceE;
 
 		// printf(
 		// 	"backBounceProbE=%lf->backBounceE=%lf\n\tEW_old=%lf\n\tEW_new=%lf\n\tEWE_old=%"
@@ -259,12 +263,14 @@ class PyramidBRDF {
 		double backBounceProbN = readTable(theta, phiN);
 		double backBounceN = backBounceProbN * exitProbs[NS];
 
-		double NSN_old = exitProbs[NSN];
-		double NSN_delta = backBounceN - NSN_old;
-		if(NSN_delta>0) {
-			exitProbs[NS] = exitProbs[NS] - NSN_delta;
-			exitProbs[NSN] = exitProbs[NSN] + NSN_delta;
-		}
+		// double NSN_old = exitProbs[NSN];
+		// double NSN_delta = backBounceN - NSN_old;
+		// if (NSN_delta > 0) {
+		// 	exitProbs[NS] = exitProbs[NS] - NSN_delta;
+		// 	exitProbs[NSN] = exitProbs[NSN] + NSN_delta;
+		// }
+		exitProbs[NS] -= backBounceN;
+		exitProbs[NSN] += backBounceN;
 
 		// printf(
 		// 	"backBounceProbN=%lf->backBounceN=%lf\n\tNS_old=%lf\n\tNS_new=%lf\n\tNSN_old=%"
@@ -277,12 +283,14 @@ class PyramidBRDF {
 		double backBounceProbW = readTable(theta, phiW);
 		double backBounceW = backBounceProbW * exitProbs[WE];
 
-		double WEW_old = exitProbs[WEW];
-		double WEW_delta = backBounceW - WEW_old;
-		if(WEW_delta>0) {
-			exitProbs[WE] = exitProbs[WE] - WEW_delta;
-			exitProbs[WEW] = exitProbs[WEW] + WEW_delta;
-		}
+		// double WEW_old = exitProbs[WEW];
+		// double WEW_delta = backBounceW - WEW_old;
+		// if (WEW_delta > 0) {
+		// 	exitProbs[WE] = exitProbs[WE] - WEW_delta;
+		// 	exitProbs[WEW] = exitProbs[WEW] + WEW_delta;
+		// }
+		exitProbs[WE] -= backBounceW;
+		exitProbs[WEW] += backBounceW;
 
 		// printf(
 		// 	"backBounceProbW=%lf->backBounceW=%lf\n\tWE_old=%lf\n\tWE_new=%lf\n\tWEW_old=%"
@@ -295,12 +303,14 @@ class PyramidBRDF {
 		double backBounceProbS = readTable(theta, phiS);
 		double backBounceS = backBounceProbS * exitProbs[SN];
 
-		double SNS_old = exitProbs[SNS];
-		double SNS_delta = backBounceS - SNS_old;
-		if(SNS_delta>0) {
-			exitProbs[SN] = exitProbs[SN] - SNS_delta;
-			exitProbs[SNS] = exitProbs[SNS] + SNS_delta;
-		}
+		// double SNS_old = exitProbs[SNS];
+		// double SNS_delta = backBounceS - SNS_old;
+		// if (SNS_delta > 0) {
+		// 	exitProbs[SN] = exitProbs[SN] - SNS_delta;
+		// 	exitProbs[SNS] = exitProbs[SNS] + SNS_delta;
+		// }
+		exitProbs[SN] -= backBounceS;
+		exitProbs[SNS] += backBounceS;
 
 		// printf(
 		// 	"backBounceProbS=%lf->backBounceS=%lf\n\tSN_old=%lf\n\tSN_new=%lf\n\tSNS_old=%"
@@ -495,14 +505,17 @@ class PyramidBRDF {
 		// Float exitProb[maxOptionCount];
 		// Vector3f outDir[maxOptionCount];
 
+		// Printf("Wo(brdf): %f , %f , %f\n", wo.x, wo.y, wo.z);
+		wo.y = -wo.y;  // use right handed system
+
 		if (setting == "printDist")
 			wo = woVector;
 
 		ReflectDist reflectDist;
 		calcReflectDist(&reflectDist, wo);
 		if (rebounce) {
-			double theta = std::acos(wo.z);
-			double phi = std::atan2(wo.y, wo.x);
+			double theta = std::acos((double)wo.z);
+			double phi = std::atan2((double)wo.y, (double)wo.x);
 			correctExitProbsBackbounce(reflectDist.exitProbs, theta, phi);
 		}
 
@@ -604,6 +617,7 @@ class PyramidBRDF {
 		// }
 
 		Vector3f wi = reflectDist.outDirs[choice];
+		wi.y = -wi.y;  // revert back to left handed system
 		// Float pdf = reflectDist.exitProbs[choice] / probSum;
 		// = reflectDist.exitProbs[choice];
 		Float brdf = reflectDist.exitBrdfs[choice] / AbsCosTheta(wi);
