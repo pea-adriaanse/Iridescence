@@ -108,10 +108,12 @@ class PyramidBRDF {
 	Float peakHeight;
 	Float angle;
 	Float angleRad;
-	// Float reflectance;
 	uint reflectCount;
 	bool shadowPaul;
 	bool rebounce;
+	Float reflectance;
+	std::array<Float, NSpectrumSamples> lambdas;
+	Float (*opticalFilter)(Float, Float);
 	std::string setting;
 	Vector3f woVector;	// when printDist is used
 	Vector3f normals[4];
@@ -128,6 +130,9 @@ class PyramidBRDF {
 				uint reflectCount,
 				bool shadowPaul,
 				bool rebounce,
+				Float reflectance,
+				std::array<Float, NSpectrumSamples> lambdas,
+				Float (*opticalFilter)(Float, Float),
 				std::string setting,
 				Vector3f woVector,
 				std::string distOutFile)
@@ -137,6 +142,9 @@ class PyramidBRDF {
 		  reflectCount(reflectCount),
 		  shadowPaul(shadowPaul),
 		  rebounce(rebounce),
+		  reflectance(reflectance),
+		  opticalFilter(opticalFilter),
+		  lambdas(lambdas),
 		  setting(setting),
 		  woVector(woVector),
 		  distOutFile(distOutFile) {
@@ -183,6 +191,18 @@ class PyramidBRDF {
 		// std::array<Float, N> stolenProb;
 	};
 	typedef struct ReflectDistS<maxOptionCount> ReflectDist;
+
+	static std::vector<uint> reflectDistIndexToFaceIndices(uint index) {
+		std::vector<uint> path;
+		while (true) {
+			path.push_back(index % 4);
+			if (index < 4)
+				break;
+			index = index / 4 - 1;
+		}
+		std::reverse(path.begin(), path.end());
+		return path;
+	}
 
 	static std::string reflectDistIndexToString(uint index) {
 		std::string str;
@@ -621,6 +641,7 @@ class PyramidBRDF {
 		// Float pdf = reflectDist.exitProbs[choice] / probSum;
 		// = reflectDist.exitProbs[choice];
 		Float brdf = reflectDist.exitBrdfs[choice] / AbsCosTheta(wi);
+		SampledSpectrum sampledBRDF = SampledSpectrum(brdf);
 		Float pdf = 1.0;
 		// Float pdf = reflectDist.exitProbs[choice];
 		// Float brdf = 1;
@@ -630,7 +651,22 @@ class PyramidBRDF {
 
 		// return BSDFSample(SampledSpectrum(reflectance / AbsCosTheta(wi)), wi,
 		// 				  pdf, BxDFFlags::SpecularReflection);
-		return BSDFSample(SampledSpectrum(brdf), wi, pdf, BxDFFlags::SpecularReflection);
+
+		Vector3f pathWo = wo;
+		std::vector<uint> path = reflectDistIndexToFaceIndices(choice);
+		for (int i = 0; i < path.size(); i++) {
+			Vector3f normal = normals[path[0]];
+			Float relativeAngle = std::acos(Dot(normal, pathWo));
+			pathWo = -Reflect(pathWo, normal);
+			for (int lambda_i = 0; lambda_i < NSpectrumSamples; lambda_i++) {
+				// Assuming light passing through is fully captured (Si absorbs >95% & optical
+				// filter itself may absorb (not to mention internal reflection))
+				Float reflected = opticalFilter(lambdas[lambda_i], relativeAngle);
+				sampledBRDF[lambda_i] = sampledBRDF[lambda_i] * reflected;
+			}
+		}
+
+		return BSDFSample(sampledBRDF, wi, pdf, BxDFFlags::SpecularReflection);
 	}
 
 	PBRT_CPU_GPU Float G1(Vector3f wo, Vector3f n) const {

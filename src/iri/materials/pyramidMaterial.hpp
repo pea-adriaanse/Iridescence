@@ -13,6 +13,7 @@ class PyramidMaterial {
 	int reflectCount;
 	bool shadowPaul;
 	bool rebounce;
+	Float reflectance;
 	std::string setting;
 	Vector3f woVector;
 	std::string distOutFile;
@@ -34,6 +35,7 @@ class PyramidMaterial {
 					int reflectCount,
 					bool shadowPaul,
 					bool rebounce,
+					Float reflectance,
 					std::string setting,
 					Vector3f woVector,
 					std::string distOutFile)
@@ -43,22 +45,29 @@ class PyramidMaterial {
 		  reflectCount(reflectCount),
 		  shadowPaul(shadowPaul),
 		  rebounce(rebounce),
+		  reflectance(reflectance),
 		  setting(setting),
 		  woVector(woVector),
 		  distOutFile(distOutFile) {}
 
 	std::string ToString() const;
 
+	static Float OpticalFilter(Float lambda, Float angle);
+
 	template <typename TextureEvaluator>
 	PBRT_CPU_GPU BxDF GetBxDF(TextureEvaluator texEval,
 							  MaterialEvalContext ctx,
-							  SampledWavelengths& lambda) const {
+							  SampledWavelengths& lambda) const {  // Lambda!!
 		// Float h = texEval(peakHeight, ctx);
 		// Float a = Clamp(texEval(angle, ctx), 0.0, 90.0);
 		// Float r = Clamp(texEval(reflectance, ctx), 0.0, 1.0);
 		// int reflectCount = texEval()
-		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul, rebounce, setting, woVector,
-						   distOutFile);
+		std::array<Float, NSpectrumSamples> lambdas;
+		for (int i = 0; i < NSpectrumSamples; i++)
+			lambdas[i] = lambda[i];
+
+		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul, rebounce, reflectance,
+						   lambdas, &OpticalFilter, setting, woVector, distOutFile);
 	}
 
 	template <typename TextureEvaluator>
