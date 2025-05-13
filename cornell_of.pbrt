@@ -1,0 +1,61 @@
+LookAt 0 7000 0  # eye
+       0 0 0  # look at point
+       0 0 1   # up vector
+Camera "perspective" "float fov" 90
+
+Sampler "halton" "integer pixelsamples" 256
+Integrator "path" "integer maxdepth" 5
+Film "rgb" "string filename" "cornell.png"
+     "integer xresolution" [400] "integer yresolution" [400]
+
+WorldBegin
+Scale 100 100 100
+
+BackBounce "backBounce.bin"
+
+MakeNamedMaterial "CustomMat"
+  "string type" [ "pyramid" ]
+    "float peakHeight" 1.0
+    "float angle" 54.7
+    "bool shadowPaul" true
+    "bool rebounce" false
+    "integer reflectCount" 3
+    "float reflectance" 1.0
+    #"string setting" "printDist"
+    #"string setting" "printBackbounce"
+  #"string type" [ "specular" ]
+    #"float reflectance" 1.0
+
+Texture "checks" "spectrum" "checkerboard"
+		"float uscale" [16] "float vscale" [16]
+		"rgb tex1" [.1 .1 .1] "rgb tex2" [.8 .8 .8]
+
+AttributeBegin
+  AreaLightSource "diffuse" "rgb L" [1 1 1] "float scale" 10
+  Shape "bilinearmesh" "point3 P" [-10 100 -10  10 100 -10  -10 100 10  10 100 10]
+AttributeEnd
+
+AttributeBegin
+  Material "diffuse" "rgb reflectance" [ 1.0 0.0 0.0] # Red
+  Shape "bilinearmesh" "point3 P" [-50 100 -50  -50 100 50  -50 0 -50  -50 0 50] # Left
+  Material "diffuse" "rgb reflectance" [ 0.0 1.0 0.0] # Green
+  Shape "bilinearmesh" "point3 P" [50 100 50  50 100 -50  50 0 50  50 0 -50] # Right
+  Material "diffuse" "rgb reflectance" [ 1.0 1.0 1.0] # White
+  Shape "bilinearmesh" "point3 P" [-50 100 -50  50 100 -50  -50 100 50  50 100 50] # Top
+
+  Material "diffuse" "rgb reflectance" [ 0.0 0.0 1.0] # Blue
+  Shape "bilinearmesh" "point3 P" [-50 100 50  50 100 50  -50 0 50  50 0 50] # Far
+
+  #Material "diffuse" "rgb reflectance" [ 0.0 0.0 1.0] # Blue
+  Material "diffuse" "texture reflectance" "checks"
+  #Shape "bilinearmesh" "point3 P" [10 15 -10  -10 15 -10  10 -5 -10  -10 -5 -10] # Near
+  Shape "bilinearmesh" "point3 P" [50 100 -50  -50 100 -50  50 0 -50  -50 0 -50] # Near
+
+  #Identity
+  #Rotate -90 1 0 0
+  #Material "diffuse" "rgb reflectance" [ 1.0 1.0 1.0] # White
+  NamedMaterial "CustomMat"
+  Shape "bilinearmesh" "point3 P" [-50 0 50  50 0 50  -50 0 -50  50 0 -50] # Bottom
+  #Shape "plymesh"
+  #  "string filename" "land.ply"
+AttributeEnd
