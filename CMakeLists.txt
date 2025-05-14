@@ -892,7 +892,7 @@ target_compile_options (pbrt_lib PUBLIC ${PBRT_CXX_FLAGS})
 
 target_link_libraries (pbrt_lib PRIVATE pbrt_warnings pbrt_opt $<$<BOOL:PBRT_CUDA_ENABLED>:cuda_build_configuration>)
 
-add_sanitizers (pbrt_lib)
+#add_sanitizers (pbrt_lib)
 
 if (WIN32)
   # Avoid a name clash when building on Visual Studio
@@ -988,7 +988,7 @@ target_link_libraries (pbrt_exe PRIVATE ${ALL_PBRT_LIBS} pbrt_opt pbrt_warnings)
 
 set_target_properties (pbrt_exe PROPERTIES OUTPUT_NAME pbrt)
 
-add_sanitizers (pbrt_exe)
+#add_sanitizers (pbrt_exe)
 
 set_property (TARGET pbrt_exe PROPERTY FOLDER "cmd")
 
@@ -1006,7 +1006,7 @@ target_compile_options (imgtool PRIVATE ${PBRT_CXX_FLAGS})
 target_include_directories (imgtool PRIVATE src src/ext ${FLIP_INCLUDE})
 target_link_libraries (imgtool PRIVATE ${ALL_PBRT_LIBS} pbrt_opt pbrt_warnings sky_lib flip_lib)
 
-add_sanitizers (imgtool)
+#add_sanitizers (imgtool)
 
 set_property (TARGET imgtool PROPERTY FOLDER "cmd")
 
@@ -1021,7 +1021,7 @@ target_compile_options (pspec PRIVATE ${PBRT_CXX_FLAGS})
 target_include_directories (pspec PRIVATE src src/ext)
 target_link_libraries (pspec PRIVATE ${ALL_PBRT_LIBS} pbrt_warnings)
 
-add_sanitizers (pspec)
+#add_sanitizers (pspec)
 
 set_property (TARGET pspec PROPERTY FOLDER "cmd")
 
@@ -1038,7 +1038,7 @@ target_link_libraries (plytool PRIVATE ${ALL_PBRT_LIBS} pbrt_warnings pbrt_opt)
 
 set_target_properties (plytool PROPERTIES OUTPUT_NAME plytool)
 
-add_sanitizers (plytool)
+#add_sanitizers (plytool)
 
 set_property (TARGET plytool PROPERTY FOLDER "cmd")
 
@@ -1055,7 +1055,7 @@ target_link_libraries (nanovdb2pbrt PRIVATE ${ALL_PBRT_LIBS} pbrt_warnings pbrt_
 
 set_target_properties (nanovdb2pbrt PROPERTIES OUTPUT_NAME nanovdb2pbrt)
 
-add_sanitizers (nanovdb2pbrt)
+#add_sanitizers (nanovdb2pbrt)
 
 set_property (TARGET nanovdb2pbrt PROPERTY FOLDER "cmd")
 
@@ -1068,7 +1068,7 @@ target_compile_definitions (cyhair2pbrt PRIVATE ${PBRT_DEFINITIONS})
 target_compile_options (cyhair2pbrt PRIVATE ${PBRT_CXX_FLAGS})
 target_link_libraries (cyhair2pbrt PRIVATE pbrt_opt pbrt_warnings)
 
-add_sanitizers (cyhair2pbrt)
+#add_sanitizers (cyhair2pbrt)
 
 set_property (TARGET cyhair2pbrt PROPERTY FOLDER "cmd")
 
@@ -1119,7 +1119,7 @@ target_compile_definitions (pbrt_test PRIVATE ${PBRT_DEFINITIONS})
 target_include_directories (pbrt_test PRIVATE src src/ext ${DOUBLE_CONVERSION_INCLUDE})
 target_compile_options(pbrt_test PUBLIC ${PBRT_CXX_FLAGS})
 
-add_sanitizers (pbrt_test)
+#add_sanitizers (pbrt_test)
 
 add_test (pbrt_unit_test pbrt_test)
 

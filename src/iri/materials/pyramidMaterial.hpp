@@ -12,6 +12,7 @@ class PyramidMaterial {
 	Float angle;
 	int reflectCount;
 	bool shadowPaul;
+	bool coating;
 	bool rebounce;
 	Float reflectance;
 	std::string setting;
@@ -34,6 +35,7 @@ class PyramidMaterial {
 					Float angle,
 					int reflectCount,
 					bool shadowPaul,
+					bool coating,
 					bool rebounce,
 					Float reflectance,
 					std::string setting,
@@ -44,6 +46,7 @@ class PyramidMaterial {
 		  angle(angle),
 		  reflectCount(reflectCount),
 		  shadowPaul(shadowPaul),
+		  coating(coating),
 		  rebounce(rebounce),
 		  reflectance(reflectance),
 		  setting(setting),
@@ -66,7 +69,7 @@ class PyramidMaterial {
 		for (int i = 0; i < NSpectrumSamples; i++)
 			lambdas[i] = lambda[i];
 
-		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul, rebounce, reflectance,
+		return PyramidBRDF(peakHeight, angle, reflectCount, shadowPaul, coating, rebounce, reflectance,
 						   lambdas, &OpticalFilter, setting, woVector, distOutFile);
 	}
 

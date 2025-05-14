@@ -33,12 +33,17 @@ extern unsigned int phiDimension;
 class PyramidBRDF {
 	static double readTable(unsigned int thetaIndex, unsigned int phiIndex) {
 		if (thetaIndex >= iri::thetaDimension || phiIndex > iri::phiDimension)
-			ErrorExit("Backbounce table of dimensions [%u][%u] accessed at index [%u][%u].",
-					  std::to_string(iri::thetaDimension), std::to_string(iri::phiDimension),
-					  std::to_string(thetaIndex), std::to_string(phiIndex));
-		if (phiIndex * iri::thetaDimension + thetaIndex >= iri::backBounceTable.size())
+			ErrorExit(
+				"Backbounce table of dimensions [%u][%u] accessed at index "
+				"[%u][%u].",
+				std::to_string(iri::thetaDimension),
+				std::to_string(iri::phiDimension), std::to_string(thetaIndex),
+				std::to_string(phiIndex));
+		if (phiIndex * iri::thetaDimension + thetaIndex >=
+			iri::backBounceTable.size())
 			ErrorExit("Index out of range.");  // should be redundant.
-		return iri::backBounceTable.at(phiIndex * iri::thetaDimension + thetaIndex);
+		return iri::backBounceTable.at(phiIndex * iri::thetaDimension +
+									   thetaIndex);
 	}
 
 	static double linInterpolate(double val1, double val2, double factor) {
@@ -73,9 +78,10 @@ class PyramidBRDF {
 		if (theta < iri::thetaBounds.min || theta > iri::thetaBounds.max ||
 			phi < iri::phiBounds.min || phi > iri::phiBounds.max) {
 			Printf(
-				"Invalid table read coordinates (%lf, %lf) outside bounds [%lf, %lf],[%lf, %lf]\n",
-				theta, phi, iri::thetaBounds.min, iri::thetaBounds.max, iri::phiBounds.min,
-				iri::phiBounds.max);
+				"Invalid table read coordinates (%lf, %lf) outside bounds "
+				"[%lf, %lf],[%lf, %lf]\n",
+				theta, phi, iri::thetaBounds.min, iri::thetaBounds.max,
+				iri::phiBounds.min, iri::phiBounds.max);
 			// return std::numeric_limits<double>::signaling_NaN();
 		}
 
@@ -84,21 +90,25 @@ class PyramidBRDF {
 		double thetaDiff = std::max<double>(0.0, theta - iri::thetaBounds.min);
 		double phiDiff = std::max<double>(0.0, phi - iri::phiBounds.min);
 		unsigned int thetaLow = std::min<unsigned int>(
-			(unsigned int)(thetaDiff / iri::thetaBounds.stepSize), iri::thetaDimension - 1);
+			(unsigned int)(thetaDiff / iri::thetaBounds.stepSize),
+			iri::thetaDimension - 1);
 		unsigned int phiLow = std::min<unsigned int>(
-			(unsigned int)(phiDiff / iri::phiBounds.stepSize), iri::phiDimension - 1);
+			(unsigned int)(phiDiff / iri::phiBounds.stepSize),
+			iri::phiDimension - 1);
 
-		unsigned int thetaHigh =
-			std::min<unsigned int>(thetaLow + 1, iri::thetaDimension - 1);				   // clamp
-		unsigned int phiHigh = std::min<unsigned int>(phiLow + 1, iri::phiDimension - 1);  // clamp
+		unsigned int thetaHigh = std::min<unsigned int>(
+			thetaLow + 1, iri::thetaDimension - 1);	 // clamp
+		unsigned int phiHigh =
+			std::min<unsigned int>(phiLow + 1, iri::phiDimension - 1);	// clamp
 
 		double ll = readTable(thetaLow, phiLow);
 		double hl = readTable(thetaHigh, phiLow);
 		double lh = readTable(thetaLow, phiHigh);
 		double hh = readTable(thetaHigh, phiHigh);
-		double xfactor =
-			(thetaDiff - (thetaLow * iri::thetaBounds.stepSize)) / iri::thetaBounds.stepSize;
-		double yfactor = (phiDiff - (phiLow * iri::phiBounds.stepSize)) / iri::phiBounds.stepSize;
+		double xfactor = (thetaDiff - (thetaLow * iri::thetaBounds.stepSize)) /
+						 iri::thetaBounds.stepSize;
+		double yfactor = (phiDiff - (phiLow * iri::phiBounds.stepSize)) /
+						 iri::phiBounds.stepSize;
 		return linInterpolate2D(ll, hl, lh, hh, xfactor, yfactor);
 	}
 
@@ -110,6 +120,7 @@ class PyramidBRDF {
 	Float angleRad;
 	uint reflectCount;
 	bool shadowPaul;
+	bool coating;
 	bool rebounce;
 	Float reflectance;
 	std::array<Float, NSpectrumSamples> lambdas;
@@ -129,6 +140,7 @@ class PyramidBRDF {
 				Float angle,
 				uint reflectCount,
 				bool shadowPaul,
+				bool coating,
 				bool rebounce,
 				Float reflectance,
 				std::array<Float, NSpectrumSamples> lambdas,
@@ -141,6 +153,7 @@ class PyramidBRDF {
 		  angleRad(Radians(angle)),
 		  reflectCount(reflectCount),
 		  shadowPaul(shadowPaul),
+		  coating(coating),
 		  rebounce(rebounce),
 		  reflectance(reflectance),
 		  opticalFilter(opticalFilter),
@@ -161,14 +174,18 @@ class PyramidBRDF {
 		// 0.577857614
 
 		// Check Validity
-		if (iri::backBounceTable.size() != iri::thetaDimension * iri::phiDimension)
+		if (iri::backBounceTable.size() !=
+			iri::thetaDimension * iri::phiDimension)
 			ErrorExit("Table size incorrect, expected %u (%u * %u) but got: %u",
-					  (iri::thetaDimension * iri::phiDimension), iri::thetaDimension,
-					  iri::phiDimension, iri::backBounceTable.size());
+					  (iri::thetaDimension * iri::phiDimension),
+					  iri::thetaDimension, iri::phiDimension,
+					  iri::backBounceTable.size());
 	}
 	// BxDF Interface:
 	// TODO: used by ??
-	PBRT_CPU_GPU BxDFFlags Flags() const { return BxDFFlags::SpecularReflection; }
+	PBRT_CPU_GPU BxDFFlags Flags() const {
+		return BxDFFlags::SpecularReflection;
+	}
 
 	PBRT_CPU_GPU
 	static constexpr const char* Name() { return "PyramidBRDF"; }
@@ -176,7 +193,9 @@ class PyramidBRDF {
 	std::string ToString() const;
 
 	/// Give BRDF given local wo & wi.
-	PBRT_CPU_GPU SampledSpectrum f(Vector3f wo, Vector3f wi, TransportMode mode) const {
+	PBRT_CPU_GPU SampledSpectrum f(Vector3f wo,
+								   Vector3f wi,
+								   TransportMode mode) const {
 		return SampledSpectrum(0.0f);
 	}
 
@@ -250,12 +269,14 @@ class PyramidBRDF {
 		return ownIndex;
 	}
 
-	void correctExitProbsBackbounce(std::array<Float, maxOptionCount>& exitProbs,
-									double theta,
-									double phi) const {
+	void correctExitProbsBackbounce(
+		std::array<Float, maxOptionCount>& exitProbs,
+		double theta,
+		double phi) const {
 		if (iri::backBounceTable.size() == 0)
 			ErrorExit(
-				"BackBounce table not initialized. Use `BackBounce \"<table-binary-path>\"` in "
+				"BackBounce table not initialized. Use `BackBounce "
+				"\"<table-binary-path>\"` in "
 				".pbrt scene file.");
 
 		uint EW = reflectDistStringToIndex("EW");
@@ -340,7 +361,8 @@ class PyramidBRDF {
 		return;
 	}
 
-	PBRT_CPU_GPU void calcReflectDist(ReflectDist* results, const Vector3f inDir) const {
+	PBRT_CPU_GPU void calcReflectDist(ReflectDist* results,
+									  const Vector3f inDir) const {
 		uint parentLevelStart;
 		uint parentLevelSize;
 
@@ -375,7 +397,8 @@ class PyramidBRDF {
 					childrenInDir = -results->outDirs[parentIndex];
 					childrenProb = results->nexitProbs[parentIndex];
 					childrenBrdf = results->nexitBrdfs[parentIndex];
-					// childrenBackCorrelation = results->backCorrelation[parentIndex];
+					// childrenBackCorrelation =
+					// results->backCorrelation[parentIndex];
 				}
 
 				// Skip zero children
@@ -395,8 +418,10 @@ class PyramidBRDF {
 				Float relativeProbs[4];
 				Float cosSum = 0;
 				for (uint face = 0; face < 4; face++) {
-					Float cos = std::max(Float(0), Dot(normals[face], childrenInDir));
-					relativeProbs[face] = cos;	// * shadowing (symmetric -> normalized away)
+					Float cos =
+						std::max(Float(0), Dot(normals[face], childrenInDir));
+					relativeProbs[face] =
+						cos;  // * shadowing (symmetric -> normalized away)
 					cosSum += cos;
 				}
 
@@ -411,23 +436,28 @@ class PyramidBRDF {
 				// Results
 				for (uint face = 0; face < 4; face++) {
 					uint faceIndex = index + face;
-					Vector3f outDir = Normalize(Reflect(childrenInDir, normals[face]));
+					Vector3f outDir =
+						Normalize(Reflect(childrenInDir, normals[face]));
 					results->outDirs[faceIndex] = outDir;
 
 					Float prob = childrenProb * relativeProbs[face];
 					// if(level > 0)
 					// 	prob += results->stolenProb[faceIndex];
 
-					// Float backCorrelation = childrenBackCorrelation * Clamp(Dot(inDir,
-					// outDir), 0, 1); results->backCorrelation[faceIndex] =
-					// backCorrelation; if (level > 0 && level + 1 < reflectCount) {
-					// if (level > 0 && level + 1 < reflectCount && ((face + 2) % 4) == parentFace)
-					// { Float backCorrelation = 	getCorrelation(inDir, outDir, (parentFace % 2)
-					// == 0); Float stolenProb = getStolenProb(backCorrelation, prob); Float
-					// stolenProb = getStolenProb() prob -= stolenProb; uint backBounceIndex =
-					// getBackbounceIndex(parentIndex, index + face); uint backBounceIndex =
-					// faceIndex * 4 + 4 + parentFace; results->exitProbs[backBounceIndex] +=
-					// stolenProb; results->stolenProb[backBounceIndex] = stolenProb;
+					// Float backCorrelation = childrenBackCorrelation *
+					// Clamp(Dot(inDir, outDir), 0, 1);
+					// results->backCorrelation[faceIndex] = backCorrelation; if
+					// (level > 0 && level + 1 < reflectCount) { if (level > 0
+					// && level + 1 < reflectCount && ((face + 2) % 4) ==
+					// parentFace) { Float backCorrelation =
+					// getCorrelation(inDir, outDir, (parentFace % 2)
+					// == 0); Float stolenProb = getStolenProb(backCorrelation,
+					// prob); Float stolenProb = getStolenProb() prob -=
+					// stolenProb; uint backBounceIndex =
+					// getBackbounceIndex(parentIndex, index + face); uint
+					// backBounceIndex = faceIndex * 4 + 4 + parentFace;
+					// results->exitProbs[backBounceIndex] += stolenProb;
+					// results->stolenProb[backBounceIndex] = stolenProb;
 					// }
 
 					Float shadowing = G1(outDir, normals[face]);
@@ -438,11 +468,14 @@ class PyramidBRDF {
 					results->nexitProbs[faceIndex] = nexitProb;
 
 					Float exitBrdf =
-						childrenBrdf * shadowing;  // TODO: double check, seems wrong when
-												   // considering this as statistics?
+						childrenBrdf *
+						shadowing;	// TODO: double check, seems wrong when
+									// considering this as statistics?
 					Float nexitBrdf =
-						childrenBrdf * (1 - shadowing);	 // TODO: double check, seems wrong when
-														 // considering this as statistics?
+						childrenBrdf *
+						(1 -
+						 shadowing);  // TODO: double check, seems wrong when
+									  // considering this as statistics?
 					results->exitBrdfs[faceIndex] = exitBrdf;
 					results->nexitBrdfs[faceIndex] = nexitBrdf;
 				}
@@ -504,7 +537,8 @@ class PyramidBRDF {
 			int offset = (saveOffset + face + 1) * 4;
 			Float prob = probList[face] - probExitList[face];
 			Vector3f newInDir = -outDirList[face];	// flip direction
-			determineProbs(newInDir, prob, offset, exitProbPtr, outDirPtr, level + 1, maxLevel);
+			determineProbs(newInDir, prob, offset, exitProbPtr, outDirPtr,
+						   level + 1, maxLevel);
 		}
 	}
 
@@ -520,6 +554,9 @@ class PyramidBRDF {
 		Point2f u,
 		TransportMode mode = TransportMode::Radiance,
 		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
+		if (wo.z < 0) {
+			return {};
+		}
 		// // Determine probabilities
 		// constexpr int maxOptionCount = pow4sum(maxLevels);
 		// Float exitProb[maxOptionCount];
@@ -659,9 +696,11 @@ class PyramidBRDF {
 			Float relativeAngle = std::acos(Dot(normal, pathWo));
 			pathWo = -Reflect(pathWo, normal);
 			for (int lambda_i = 0; lambda_i < NSpectrumSamples; lambda_i++) {
-				// Assuming light passing through is fully captured (Si absorbs >95% & optical
-				// filter itself may absorb (not to mention internal reflection))
-				Float reflected = opticalFilter(lambdas[lambda_i], relativeAngle);
+				// Assuming light passing through is fully captured (Si absorbs
+				// >95% & optical filter itself may absorb (not to mention
+				// internal reflection))
+				Float reflected =
+					opticalFilter(lambdas[lambda_i], relativeAngle);
 				sampledBRDF[lambda_i] = sampledBRDF[lambda_i] * reflected;
 			}
 		}
@@ -692,8 +731,9 @@ class PyramidBRDF {
 
 	PBRT_CPU_GPU static Vector3f zeroAzimuth(Vector3f w) {
 		// "Rotate" wo back to wr with azimuth=phi=0
-		Float x =
-			std::sqrt(1.0 - w.z * w.z);	 // watch out for NaN bug (non-normal w floating error)
+		Float x = std::sqrt(
+			1.0 -
+			w.z * w.z);	 // watch out for NaN bug (non-normal w floating error)
 		return Vector3f(x, 0, w.z);
 	}
 
@@ -715,10 +755,11 @@ class PyramidBRDF {
 		return shadowing;
 	}
 
-	PBRT_CPU_GPU Float PDF(Vector3f wo,
-						   Vector3f wi,
-						   TransportMode mode,
-						   BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
+	PBRT_CPU_GPU Float
+	PDF(Vector3f wo,
+		Vector3f wi,
+		TransportMode mode,
+		BxDFReflTransFlags sampleFlags = BxDFReflTransFlags::All) const {
 		return 0;
 	}
 

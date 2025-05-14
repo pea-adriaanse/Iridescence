@@ -18,7 +18,8 @@ MakeNamedMaterial "CustomMat"
     "float peakHeight" 1.0
     "float angle" 54.7
     "bool shadowPaul" true
-    "bool rebounce" false
+    "bool coating" true
+    "bool rebounce" true
     "integer reflectCount" 3
     "float reflectance" 1.0
     #"string setting" "printDist"

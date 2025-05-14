@@ -17,7 +17,7 @@ class PyramidTest : public testing::Test {
 	std::array<Float, NSpectrumSamples> lambdas = {350.0f, 400.0f, 450.0f, 400.0f};
 
 	PyramidTest() {
-		this->brdf = PyramidBRDF(1.0, 54.7, 1, false, false, 1.0, lambdas, nullptr, "none",
+		this->brdf = PyramidBRDF(1.0, 54.7, 1, false, false, false, 1.0, lambdas, nullptr, "none",
 								 Vector3f(0, 0, 0), std::string(""));
 		this->angleRad = Radians(54.7);
 
@@ -125,7 +125,7 @@ void expectNear(Vector3f actual, Vector3f expected, float delta) {
 }
 
 TEST_F(PyramidTest, CalcReflectDist2) {
-	this->brdf = PyramidBRDF(1.0, 45.0, 2, false, false, 1.0, lambdas, nullptr, "none",
+	this->brdf = PyramidBRDF(1.0, 45.0, 2, false, false, false, 1.0, lambdas, nullptr, "none",
 							 Vector3f(0, 0, 0), std::string(""));
 	PyramidBRDF::ReflectDist dist;
 	Vector3f dir = Vector3f(0, 0, 1);
