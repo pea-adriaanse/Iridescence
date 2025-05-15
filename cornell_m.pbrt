@@ -1,11 +1,11 @@
-LookAt 0 700 0  # eye
-       0 0 0  # look at point
-       0 0 1   # up vector
+LookAt 0 500 -1000  # eye
+       0 500 0  # look at point
+       0 1 0   # up vector
 Camera "perspective" "float fov" 90
 
-Sampler "halton" "integer pixelsamples" 64
+Sampler "halton" "integer pixelsamples" 1024
 Integrator "path" "integer maxdepth" 5
-Film "rgb" "string filename" "cornell_m.png"
+Film "rgb" "string filename" "cornell_m.exr"
      "integer xresolution" [400] "integer yresolution" [400]
 
 WorldBegin
@@ -48,6 +48,7 @@ AttributeBegin
   Rotate -90 1 0 0 # orientation
   NamedMaterial "CustomMat"
   Shape "plymesh"
+    "string filename" "../tracing/land_1000.ply"
     #"string filename" "../tracing/1000um1000u.ply"
-    "string filename" "../tracing/1000um1000u10deg.ply"
+    #"string filename" "../tracing/1000um1000u10deg.ply"
 AttributeEnd

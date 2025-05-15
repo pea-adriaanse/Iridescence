@@ -688,7 +688,7 @@ class PyramidBRDF {
 
 		// return BSDFSample(SampledSpectrum(reflectance / AbsCosTheta(wi)), wi,
 		// 				  pdf, BxDFFlags::SpecularReflection);
-
+		if(coating){
 		Vector3f pathWo = wo;
 		std::vector<uint> path = reflectDistIndexToFaceIndices(choice);
 		for (int i = 0; i < path.size(); i++) {
@@ -703,7 +703,7 @@ class PyramidBRDF {
 					opticalFilter(lambdas[lambda_i], relativeAngle);
 				sampledBRDF[lambda_i] = sampledBRDF[lambda_i] * reflected;
 			}
-		}
+		}}
 
 		return BSDFSample(sampledBRDF, wi, pdf, BxDFFlags::SpecularReflection);
 	}
