@@ -390,7 +390,8 @@ class PyramidBRDF {
 					childrenBrdf = 1.0;
 					// childrenBackCorrelation = 1.0;
 				} else {
-					// TODO: Double check next two lines
+					// entryID and parentID is not index, hence no -1
+					// evaluation uses simpler indexing
 					uint parentID = (entryID / 4);	//- 1;
 					parentIndex = parentID + parentLevelStart;
 					parentFace = parentID % 4;
@@ -673,11 +674,14 @@ class PyramidBRDF {
 		// 	}
 		// }
 
+		std::vector<uint> path = reflectDistIndexToFaceIndices(choice);
+		Float cumulativeReflectance = std::pow(reflectance, path.size());
+
 		Vector3f wi = reflectDist.outDirs[choice];
 		wi.y = -wi.y;  // revert back to left handed system
 		// Float pdf = reflectDist.exitProbs[choice] / probSum;
 		// = reflectDist.exitProbs[choice];
-		Float brdf = reflectDist.exitBrdfs[choice] / AbsCosTheta(wi);
+		Float brdf = cumulativeReflectance * reflectDist.exitBrdfs[choice] / AbsCosTheta(wi);
 		SampledSpectrum sampledBRDF = SampledSpectrum(brdf);
 		Float pdf = 1.0;
 		// Float pdf = reflectDist.exitProbs[choice];
@@ -686,11 +690,11 @@ class PyramidBRDF {
 
 		// Float cosTheta = Dot(wo, normal);
 
+
 		// return BSDFSample(SampledSpectrum(reflectance / AbsCosTheta(wi)), wi,
 		// 				  pdf, BxDFFlags::SpecularReflection);
 		if(coating){
 		Vector3f pathWo = wo;
-		std::vector<uint> path = reflectDistIndexToFaceIndices(choice);
 		for (int i = 0; i < path.size(); i++) {
 			Vector3f normal = normals[path[0]];
 			Float relativeAngle = std::acos(Dot(normal, pathWo));
