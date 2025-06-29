@@ -202,10 +202,13 @@ class PyramidBRDF {
 	template <uint N>
 	struct ReflectDistS {
 		std::array<Vector3f, N> outDirs;
-		std::array<Float, N> exitBrdfs;
+		std::array<Float, N> exitBrdfs; //Scalings;	// (1/4*1/cos(theta_reflected)*1/max(0,(w_i*n_F))
+												// // the last terms denominator
+												// is always >0 if valid
 		std::array<Float, N> nexitBrdfs;
 		std::array<Float, N> nexitProbs;
 		std::array<Float, N> exitProbs;
+		std::array<Float, N> exitBrdfsScalings;
 		// std::array<Float, N> backCorrelation;
 		// std::array<Float, N> stolenProb;
 	};
@@ -383,11 +386,13 @@ class PyramidBRDF {
 
 				uint parentIndex = 0;
 				uint parentFace = 0;
+				float parentExitBrdfsScaling;
 				// Determine input parameters
 				if (level == 0) {
 					childrenInDir = inDir;
 					childrenProb = 1.0;
 					childrenBrdf = 1.0;
+					parentExitBrdfsScaling = 1.0;
 					// childrenBackCorrelation = 1.0;
 				} else {
 					// entryID and parentID is not index, hence no -1
@@ -398,6 +403,7 @@ class PyramidBRDF {
 					childrenInDir = -results->outDirs[parentIndex];
 					childrenProb = results->nexitProbs[parentIndex];
 					childrenBrdf = results->nexitBrdfs[parentIndex];
+					parentExitBrdfsScaling = results->exitBrdfsScalings[parentIndex];
 					// childrenBackCorrelation =
 					// results->backCorrelation[parentIndex];
 				}
@@ -411,6 +417,7 @@ class PyramidBRDF {
 						results->nexitProbs[index + face] = 0;
 						results->nexitBrdfs[index + face] = 0;
 						results->exitBrdfs[index + face] = 0;
+						results->exitBrdfsScalings[index + face] = 0;
 					}
 					continue;
 				}
@@ -418,9 +425,11 @@ class PyramidBRDF {
 				// Relative face probabilities
 				Float relativeProbs[4];
 				Float cosSum = 0;
+				Float cosSaved[4];	// For ExitBrdfsScaling
 				for (uint face = 0; face < 4; face++) {
 					Float cos =
 						std::max(Float(0), Dot(normals[face], childrenInDir));
+					cosSaved[face] = cos;
 					relativeProbs[face] =
 						cos;  // * shadowing (symmetric -> normalized away)
 					cosSum += cos;
@@ -442,6 +451,7 @@ class PyramidBRDF {
 					results->outDirs[faceIndex] = outDir;
 
 					Float prob = childrenProb * relativeProbs[face];
+					Float faceExitBrdfsScaling = cosSaved[face]; // * 4 * outDir.z;
 					// if(level > 0)
 					// 	prob += results->stolenProb[faceIndex];
 
@@ -478,6 +488,7 @@ class PyramidBRDF {
 						 shadowing);  // TODO: double check, seems wrong when
 									  // considering this as statistics?
 					results->exitBrdfs[faceIndex] = exitBrdf;
+					results->exitBrdfsScalings[faceIndex] = parentExitBrdfsScaling * faceExitBrdfsScaling;
 					results->nexitBrdfs[faceIndex] = nexitBrdf;
 				}
 			}
@@ -623,7 +634,7 @@ class PyramidBRDF {
 			for (unsigned int i = 0; i < optionCount; i++) {
 				exitProbSum += reflectDist.exitProbs[i];
 			}
-			fprintf(csv, "index,indexStr,stolenProb,exitProb,exitBrdf\n");
+			fprintf(csv, "index,indexStr,stolenProb,exitProb,exitBrdfs\n");
 			for (unsigned int i = 0; i < optionCount; i++) {
 				std::string indexStr = reflectDistIndexToString(i);
 				fprintf(csv, "%i,%s,%f,%f,%e\n", i, indexStr.c_str(),
@@ -681,7 +692,11 @@ class PyramidBRDF {
 		wi.y = -wi.y;  // revert back to left handed system
 		// Float pdf = reflectDist.exitProbs[choice] / probSum;
 		// = reflectDist.exitProbs[choice];
-		Float brdf = cumulativeReflectance * reflectDist.exitBrdfs[choice] / AbsCosTheta(wi);
+		// Float brdf = cumulativeReflectance * reflectDist.exitProbs[choice] / AbsCosTheta(wi);
+		// Float brdf = cumulativeReflectance * reflectDist.exitBrdfs[choice] / AbsCosTheta(wi);
+		Float brdf = cumulativeReflectance * 1 / AbsCosTheta(wi); // Probability factor implicit in sampling. <- USED
+		// Float brdf = cumulativeReflectance * 1 / (2*AbsCosTheta(wi)); // Probability factor implicit in sampling.
+		// Float brdf = cumulativeReflectance * 1 / (4*AbsCosTheta(wi)*reflectDist.exitBrdfsScalings[choice]);
 		SampledSpectrum sampledBRDF = SampledSpectrum(brdf);
 		Float pdf = 1.0;
 		// Float pdf = reflectDist.exitProbs[choice];
@@ -690,24 +705,25 @@ class PyramidBRDF {
 
 		// Float cosTheta = Dot(wo, normal);
 
-
 		// return BSDFSample(SampledSpectrum(reflectance / AbsCosTheta(wi)), wi,
 		// 				  pdf, BxDFFlags::SpecularReflection);
-		if(coating){
-		Vector3f pathWo = wo;
-		for (int i = 0; i < path.size(); i++) {
-			Vector3f normal = normals[path[0]];
-			Float relativeAngle = std::acos(Dot(normal, pathWo));
-			pathWo = -Reflect(pathWo, normal);
-			for (int lambda_i = 0; lambda_i < NSpectrumSamples; lambda_i++) {
-				// Assuming light passing through is fully captured (Si absorbs
-				// >95% & optical filter itself may absorb (not to mention
-				// internal reflection))
-				Float reflected =
-					opticalFilter(lambdas[lambda_i], relativeAngle);
-				sampledBRDF[lambda_i] = sampledBRDF[lambda_i] * reflected;
+		if (coating) {
+			Vector3f pathWo = wo;
+			for (int i = 0; i < path.size(); i++) {
+				Vector3f normal = normals[path[0]];
+				Float relativeAngle = std::acos(Dot(normal, pathWo));
+				pathWo = -Reflect(pathWo, normal);
+				for (int lambda_i = 0; lambda_i < NSpectrumSamples;
+					 lambda_i++) {
+					// Assuming light passing through is fully captured (Si
+					// absorbs >95% & optical filter itself may absorb (not to
+					// mention internal reflection))
+					Float reflected =
+						opticalFilter(lambdas[lambda_i], relativeAngle);
+					sampledBRDF[lambda_i] = sampledBRDF[lambda_i] * reflected;
+				}
 			}
-		}}
+		}
 
 		return BSDFSample(sampledBRDF, wi, pdf, BxDFFlags::SpecularReflection);
 	}
